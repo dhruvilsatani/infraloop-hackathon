@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>InfraLoop – production-readiness report for your repo</title>
+<meta name="description" content="Scan a repository and get one report: what is missing for production, the recommended setup and a monthly cost computed in code. Report only; it never connects to your cloud." />
+<script src="/assets/vendor/marked.min.js"></script>
+<script src="/assets/vendor/three.min.js"></script>
+<script src="/assets/vendor/purify.min.js"></script>
+<style>
+  @font-face { font-family: 'Space Grotesk'; font-weight: 400; font-style: normal; font-display: swap; src: url('/assets/fonts/space-grotesk-latin-400-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Space Grotesk'; font-weight: 500; font-style: normal; font-display: swap; src: url('/assets/fonts/space-grotesk-latin-500-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Space Grotesk'; font-weight: 600; font-style: normal; font-display: swap; src: url('/assets/fonts/space-grotesk-latin-600-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Space Grotesk'; font-weight: 700; font-style: normal; font-display: swap; src: url('/assets/fonts/space-grotesk-latin-700-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'JetBrains Mono'; font-weight: 400; font-style: normal; font-display: swap; src: url('/assets/fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'JetBrains Mono'; font-weight: 500; font-style: normal; font-display: swap; src: url('/assets/fonts/jetbrains-mono-latin-500-normal.woff2') format('woff2'); }
+  :root {
+    --bg: #07080d;
+    --accent-1: #22d3ee;
+    --accent-2: #a78bfa;
+    --card-bg: rgba(255,255,255,0.045);
+    --card-border: rgba(255,255,255,0.12);
+    --text: #eceef7;
+    --text-dim: #a6adc4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg);
+    background-image:
+      radial-gradient(circle at 20% -10%, rgba(34,211,238,0.14), transparent 40%),
+      radial-gradient(circle at 80% 0%, rgba(167,139,250,0.14), transparent 40%);
+    color: var(--text); font-family: 'Space Grotesk', system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+  .page { position: relative; z-index: 10; width: 100%; display: flex; flex-direction: column; align-items: center; padding: 32px 16px 64px; }
+  #webgl-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; }
+  .bg-glow-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; }
+  .glow-top { position: absolute; top: -15%; left: 50%; transform: translateX(-50%); width: 80vw; height: 50vh;
+    background: radial-gradient(ellipse at center, rgba(34,211,238,0.12), rgba(167,139,250,0.08), transparent 70%); }
+  .glow-bottom { position: absolute; bottom: -10%; left: 50%; transform: translateX(-50%); width: 90vw; height: 60vh;
+    background: radial-gradient(circle at center, rgba(244,114,182,0.10), rgba(34,211,238,0.15), transparent 65%); }
+  .globe-media-layer { position: fixed; bottom: -15vh; left: 50%; transform: translateX(-50%); width: 100vw; max-width: 1600px; height: 85vh;
+    z-index: 1; pointer-events: none; overflow: hidden;
+    -webkit-mask-image: radial-gradient(circle at 50% 70%, black 40%, transparent 75%); mask-image: radial-gradient(circle at 50% 70%, black 40%, transparent 75%); }
+  .globe-still, .globe-video { position: absolute; width: 100%; height: 100%; object-fit: cover; object-position: center bottom; opacity: 0.45; filter: saturate(1.4) hue-rotate(170deg) contrast(1.15); }
+  .globe-video { opacity: 0; transition: opacity 1.2s ease-in-out; }
+  .globe-video.ready { opacity: 0.55; }
+  .chip { position: fixed; padding: 8px 16px; background: rgba(15,23,42,0.65); border: 1px solid rgba(255,255,255,0.12); border-radius: 999px;
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--accent-1);
+    display: flex; align-items: center; gap: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2);
+    z-index: 2; pointer-events: none; animation: floatChip 6s ease-in-out infinite alternate; }
+  .chip-1 { top: 38%; left: 4%; } .chip-2 { top: 28%; right: 4%; animation-delay: 1.5s; }
+  .chip-3 { bottom: 25%; left: 6%; animation-delay: 3s; } .chip-4 { bottom: 28%; right: 5%; animation-delay: 4.5s; }
+  .chip-icon { width: 18px; height: 18px; background: linear-gradient(135deg, var(--accent-1), var(--accent-2)); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #000; font-weight: 700; font-size: 0.65rem; }
+  @keyframes floatChip { 0% { transform: translateY(0) rotate(0deg); } 100% { transform: translateY(-12px) rotate(2deg); } }
+  @media (max-width: 1560px) { .chip { display: none; } }
+  @media (max-width: 768px) { .globe-media-layer { height: 60vh; bottom: -5vh; } }
+  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .loop-icon { width: 34px; height: 34px; }
+  .brand h1 {
+    font-size: 1.8rem; margin: 0; font-weight: 700; letter-spacing: -0.5px;
+    background: linear-gradient(100deg, var(--accent-1), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .tagline { color: var(--text-dim); margin: 0 0 16px; font-size: 1rem; text-align: center; max-width: 560px; }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: center; margin: 0 0 24px; padding: 0; list-style: none; font-size: 0.85rem; color: var(--text-dim); }
+  .facts li::before { content: "\2713"; color: var(--accent-1); margin-right: 6px; font-weight: 700; }
+
+  .hero { width: 100%; max-width: 860px; text-align: center; margin: 8px 0 28px; }
+  .hero-title { text-wrap: balance; font-size: clamp(1.8rem, 4vw, 2.9rem); line-height: 1.15; letter-spacing: -1px; font-weight: 700; margin: 10px 0 16px; }
+  .hero-title .grad { background: linear-gradient(135deg, #fff 0%, #f472b6 50%, var(--accent-2) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero-sub { text-wrap: balance; color: var(--text-dim); font-size: clamp(0.95rem, 1.8vw, 1.1rem); line-height: 1.65; max-width: 720px; margin: 0 auto 18px; }
+  .hero .facts { margin: 0 0 22px; }
+  .hero-cta { display: inline-block; padding: 14px 30px; border-radius: 999px; background: #fff; color: #05060a; font-weight: 700; text-decoration: none; box-shadow: 0 0 30px rgba(255,255,255,0.25); transition: transform .15s ease, box-shadow .15s ease; }
+  .hero-cta:hover { transform: translateY(-2px); box-shadow: 0 0 45px rgba(255,255,255,0.4); }
+  .hero-fine { color: var(--text-dim); font-size: 0.78rem; margin: 14px 0 0; }
+  .steps { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 22px; }
+  .step-dot {
+    font-size: 0.82rem; color: var(--text-dim); padding: 6px 14px; border-radius: 999px;
+    border: 1px solid var(--card-border); background: var(--card-bg);
+  }
+  .step-dot.active { color: #05060a; background: linear-gradient(100deg, var(--accent-1), var(--accent-2)); border-color: transparent; font-weight: 700; }
+
+  .card {
+    width: 100%; max-width: 640px; background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: 20px; padding: 28px; backdrop-filter: blur(14px);
+    box-shadow: 0 0 60px rgba(34,211,238,0.06);
+  }
+  .card h2 { margin: 0 0 6px; font-size: 1.25rem; font-weight: 600; }
+  .card p.hint { color: var(--text-dim); font-size: 0.9rem; margin: 0 0 20px; }
+
+  label { display: block; font-size: 0.88rem; color: var(--text-dim); margin-bottom: 14px; }
+  label span { display: block; margin-bottom: 6px; color: var(--text); font-weight: 500; }
+  input[type=text], textarea {
+    width: 100%; background: rgba(0,0,0,0.35); border: 1px solid var(--card-border); border-radius: 10px;
+    padding: 12px 14px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; outline: none;
+  }
+  textarea { min-height: 90px; resize: vertical; font-size: 0.85rem; }
+  input[type=text]:focus, textarea:focus { border-color: var(--accent-1); box-shadow: 0 0 0 3px rgba(34,211,238,0.18); }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--accent-1); outline-offset: 2px; }
+
+  button {
+    margin-top: 10px; width: 100%; border: none; border-radius: 10px; padding: 13px 18px;
+    font-family: inherit; font-weight: 700; font-size: 0.98rem; cursor: pointer; color: #05060a;
+    background: linear-gradient(100deg, var(--accent-1), var(--accent-2)); transition: transform .15s ease, opacity .15s ease;
+  }
+  button:hover { transform: translateY(-1px); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  button.secondary { color: var(--text); background: rgba(255,255,255,0.07); border: 1px solid var(--card-border); font-weight: 500; }
+  .choices { display: flex; flex-wrap: wrap; gap: 8px; }
+  .choice { margin: 0; width: auto; padding: 9px 14px; font-size: 0.85rem; font-weight: 500; color: var(--text); background: rgba(0,0,0,0.35); border: 1px solid var(--card-border); }
+  .choice.selected { color: #05060a; background: linear-gradient(100deg, var(--accent-1), var(--accent-2)); border-color: transparent; font-weight: 700; }
+  .optional-tag { color: var(--text-dim); font-size: 0.78rem; font-weight: 400; margin-left: 6px; }
+  .hidden { display: none !important; }
+  .or { text-align: center; color: var(--text-dim); font-size: 0.82rem; margin: 6px 0 14px; }
+  .drop { border: 1.5px dashed var(--card-border); border-radius: 12px; padding: 18px 16px; text-align: center; color: var(--text-dim); font-size: 0.9rem; margin-bottom: 14px; transition: border-color .2s, background .2s; }
+  .drop.over { border-color: var(--accent-1); background: rgba(34,211,238,0.07); }
+  .drop button { width: auto; margin: 8px 0 0; padding: 9px 16px; font-size: 0.86rem; }
+  .upload-summary { text-align: left; font-size: 0.82rem; line-height: 1.55; margin-top: 12px; color: var(--text); }
+  .upload-summary .dim { color: var(--text-dim); }
+  .upload-summary .ok { color: var(--accent-1); }
+  .privacy-note { color: var(--text-dim); font-size: 0.8rem; margin-top: 10px; line-height: 1.45; text-align: left; }
+
+  .loading { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 26px 0; }
+  .spinner { width: 40px; height: 40px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent-1); border-right-color: var(--accent-2); animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-status { color: var(--text-dim); font-size: 0.9rem; text-align: center; }
+
+  .report-body { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; line-height: 1.65; color: var(--text); max-height: 65vh; overflow: auto; padding-right: 6px; }
+  .report-body h1, .report-body h2, .report-body h3 { font-family: 'Space Grotesk', sans-serif; color: var(--accent-1); margin-top: 1.4em; }
+  .report-body table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.8rem; }
+  .report-body th, .report-body td { border: 1px solid var(--card-border); padding: 6px 10px; text-align: left; vertical-align: top; }
+  .report-body th { color: var(--accent-2); }
+  .report-body code { background: rgba(255,255,255,0.07); padding: 2px 5px; border-radius: 4px; }
+  .report-body a { color: var(--accent-1); }
+  .error-box { color: #ffb0b0; background: rgba(255,80,80,0.1); border: 1px solid rgba(255,80,80,0.3); border-radius: 10px; padding: 12px 14px; font-size: 0.88rem; margin-top: 14px; }
+
+  .info { width: 100%; max-width: 900px; margin-top: 48px; }
+  .info h3 { text-align: center; font-size: 1.15rem; margin: 0 0 16px; font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .tile { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 18px; }
+  .tile h4 { margin: 0 0 6px; font-size: 1rem; color: var(--accent-1); }
+  .tile p { margin: 0; font-size: 0.88rem; line-height: 1.55; color: var(--text-dim); }
+  .not { text-align: center; font-size: 0.88rem; color: var(--text-dim); margin: 22px auto 0; max-width: 640px; line-height: 1.55; }
+  .next { width: 100%; max-width: 900px; margin-top: 44px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 18px; padding: 24px 22px; }
+  .next .tag { display: inline-block; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-2); border: 1px solid var(--card-border); border-radius: 999px; padding: 3px 10px; margin-bottom: 10px; }
+  .next h3 { margin: 0 0 8px; font-size: 1.15rem; font-weight: 600; text-align: left; }
+  .next > p { margin: 0 0 16px; font-size: 0.92rem; line-height: 1.6; color: var(--text-dim); }
+  .next .grid { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+  .next .tile { background: rgba(255,255,255,0.03); padding: 14px; }
+  .next .tile h4 { font-size: 0.92rem; }
+  .next .tile p { font-size: 0.82rem; }
+  .next .fine { margin: 14px 0 0; font-size: 0.8rem; color: var(--text-dim); line-height: 1.5; }
+  .roadmap { margin: 18px 0 0; padding: 14px 0 0; border-top: 1px solid var(--card-border); }
+  .roadmap h4 { margin: 0 0 8px; font-size: 0.92rem; color: var(--accent-1); }
+  .roadmap ul { margin: 0; padding-left: 18px; font-size: 0.85rem; line-height: 1.6; color: var(--text-dim); }
+  footer { margin-top: 36px; font-size: 0.8rem; color: var(--text-dim); text-align: center; max-width: 640px; line-height: 1.5; }
+
+  .example-banner { background: rgba(34,211,238,0.08); border: 1px solid rgba(34,211,238,0.3); border-radius: 10px; padding: 10px 14px; font-size: 0.85rem; color: var(--text); margin: 0 0 14px; line-height: 1.5; }
+  /* Profile drawer */
+  .profile-btn { position: absolute; top: 20px; right: 20px; width: auto; margin: 0; padding: 8px 18px; font-size: 0.88rem; font-weight: 500; color: var(--text); background: rgba(255,255,255,0.06); border: 1px solid var(--card-border); border-radius: 999px; backdrop-filter: blur(12px); }
+  .profile-btn:hover { background: rgba(255,255,255,0.12); }
+  .drawer-overlay { position: fixed; inset: 0; background: rgba(3,4,8,0.7); backdrop-filter: blur(8px); z-index: 100; opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+  .drawer-overlay.active { opacity: 1; pointer-events: auto; }
+  .profile-drawer { position: fixed; top: 0; right: -440px; width: 100%; max-width: 400px; height: 100%; background: rgba(10,13,24,0.96); border-left: 1px solid var(--card-border); backdrop-filter: blur(24px); z-index: 101; padding: 28px; display: flex; flex-direction: column; gap: 22px; transition: right .35s cubic-bezier(0.16,1,0.3,1); box-shadow: -20px 0 60px rgba(0,0,0,0.8); overflow-y: auto; visibility: hidden; }
+  .profile-drawer.active { right: 0; visibility: visible; }
+  .drawer-head { display: flex; align-items: center; justify-content: space-between; }
+  .drawer-head h2 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+  .drawer-close { width: auto; margin: 0; padding: 4px 10px; font-size: 1.6rem; line-height: 1; background: transparent; color: var(--text-dim); border: none; }
+  .drawer-close:hover { color: #fff; transform: none; }
+  .avatar { width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-1), var(--accent-2)); display: flex; align-items: center; justify-content: center; font-size: 1.7rem; font-weight: 700; color: #05060a; }
+  .p-name { margin: 8px 0 2px; font-size: 1.3rem; font-weight: 700; }
+  .p-role { margin: 0 0 6px; color: var(--accent-1); font-size: 0.92rem; }
+  .p-bio { margin: 0; color: var(--text-dim); font-size: 0.9rem; line-height: 1.55; }
+  .info-list { display: flex; flex-direction: column; gap: 10px; }
+  .info-item { background: rgba(255,255,255,0.04); border: 1px solid var(--card-border); border-radius: 12px; padding: 10px 14px; }
+  .info-label { font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+  .info-value { font-size: 0.9rem; color: var(--text); font-family: 'JetBrains Mono', monospace; word-break: break-word; }
+  .contact-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: auto; }
+  .contact-links a { flex: 1; min-width: 110px; text-align: center; padding: 11px 12px; border-radius: 10px; text-decoration: none; font-size: 0.9rem; font-weight: 600; color: var(--text); background: rgba(255,255,255,0.06); border: 1px solid var(--card-border); }
+  .contact-links a.primary { color: #05060a; background: linear-gradient(100deg, var(--accent-1), var(--accent-2)); border-color: transparent; }
+  .contact-links a:hover { border-color: var(--accent-1); }
+  @media (max-width: 520px) { .profile-btn { top: 12px; right: 12px; } .brand { margin-top: 36px; } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } button { transition: none; } .chip { animation: none; } .globe-video { display: none; } }
+</style>
+</head>
+<body>
+  <canvas id="webgl-bg" aria-hidden="true"></canvas>
+  <div class="bg-glow-container" aria-hidden="true"><div class="glow-top"></div><div class="glow-bottom"></div></div>
+  <div class="globe-media-layer" aria-hidden="true">
+    <img src="/assets/globe.jpg" alt="" class="globe-still" onerror="this.remove()" />
+    <video class="globe-video" autoplay loop muted playsinline id="globe-video" poster="/assets/globe.jpg"><source src="/assets/globe.mp4" type="video/mp4" /></video>
+  </div>
+  <div class="chip chip-1" aria-hidden="true"><div class="chip-icon">&#10003;</div> Evidence for every finding</div>
+  <div class="chip chip-2" aria-hidden="true"><div class="chip-icon">&#8364;</div> Cost calculated in code</div>
+  <div class="chip chip-3" aria-hidden="true"><div class="chip-icon">&#128274;</div> Secret files never uploaded</div>
+  <div class="chip chip-4" aria-hidden="true"><div class="chip-icon">&#9679;</div> Report only, no cloud access</div>
+  <div class="page">
+    <button type="button" class="profile-btn" id="profile-btn" onclick="openProfile()" aria-haspopup="dialog">About &amp; contact</button>
+
+  <header class="brand">
+    <svg class="loop-icon" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="48" y2="48"><stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs>
+      <path d="M16 24a8 8 0 1 1 8 8c-6 0-10-4-10-10a12 12 0 1 1 12 12" stroke="url(#g)" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+    </svg>
+    <h1>InfraLoop</h1>
+  </header>
+  <section class="hero">
+    <h1 class="hero-title">Know what is missing before you go to production.<br /><span class="grad">Your code never goes to an AI.</span></h1>
+    <p class="hero-sub">Point InfraLoop at your repository and get one production report: the gaps it found, the setup we recommend, and what it costs per month, calculated in code. The AI only receives a short summary of what the scan found, never your source code.</p>
+    <ul class="facts">
+      <li>Your source code is never sent to an AI model</li>
+      <li>Secret files (.env, keys) are never uploaded</li>
+      <li>Your files are deleted right after the scan</li>
+      <li>Report only: never touches your cloud account</li>
+    </ul>
+    <a href="#step-scan" class="hero-cta" onclick="document.getElementById('repo-input').focus()">Get my production report &darr;</a>
+    <p class="hero-fine">In the rare case a project has almost no code, a short part of its README may be included.</p>
+  </section>
+
+  <div class="steps" aria-label="Progress">
+    <div class="step-dot active" id="dot-scan">1 &middot; Scan</div>
+    <div class="step-dot" id="dot-questions">2 &middot; Answer</div>
+    <div class="step-dot" id="dot-report">3 &middot; Report</div>
+  </div>
+
+  <main style="width:100%;display:flex;flex-direction:column;align-items:center;">
+  <!-- STEP 1 -->
+  <div class="card" id="step-scan">
+    <h2>Analyze a repository</h2>
+    <p class="hint">Public repo: paste the link. Private repo: upload the folder instead (secret files are never sent). Takes about a minute.</p>
+    <label><span>Repository link</span>
+      <input type="text" id="repo-input" placeholder="https://github.com/owner/repo" autocomplete="off" />
+    </label>
+    <div class="or">or upload your project</div>
+    <div class="drop" id="drop">
+      Drag your project folder here
+      <div><button type="button" class="secondary" onclick="document.getElementById('folder-input').click()">Choose folder&hellip;</button></div>
+      <input type="file" id="folder-input" webkitdirectory multiple hidden />
+      <div class="upload-summary hidden" id="upload-summary"></div>
+      <div class="privacy-note">Folders like node_modules and .git are skipped. Secret files (.env, keys) are never sent: only their names are noted. Your files are used for this scan only and deleted right after.</div>
+    </div>
+    <label><span>Tell us more about the project <em class="optional-tag">(optional)</em></span>
+      <textarea id="notes-input" placeholder="For example: what it does, who uses it, expected users, how big the database gets, compliance needs. Do not paste passwords or keys."></textarea>
+    </label>
+    <button id="scan-btn" onclick="startScan()">Analyze</button>
+    <button type="button" class="secondary" id="example-btn" onclick="showExample()">See an example report first</button>
+    <div id="scan-loading" class="loading hidden" role="status">
+      <div class="spinner"></div>
+      <div class="loading-status">Scanning repository structure&hellip;</div>
+    </div>
+    <div id="scan-error" role="alert"></div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="card hidden" id="step-questions">
+    <h2>A few quick questions</h2>
+    <p class="hint">These shape the recommendation: scale, budget and constraints a scan cannot see.</p>
+    <div id="questions"></div>
+    <label style="display:flex;align-items:flex-start;gap:10px;margin:14px 0 6px;font-size:.9rem;color:var(--muted,#9aa3b8);cursor:pointer">
+      <input type="checkbox" id="offline-mode" style="width:auto;margin-top:3px" />
+      <span><strong>Quick report without AI</strong> &mdash; written by fixed rules from the scan. Instant, nothing is sent to a model, but shorter and no AI observations.</span>
+    </label>
+    <button id="answer-btn" onclick="submitAnswers()">Generate report</button>
+    <button class="secondary" onclick="goBack('scan')">&larr; Back</button>
+    <div id="report-loading" class="loading hidden" role="status">
+      <div class="spinner"></div>
+      <div class="loading-status" id="report-loading-text">Writing your report&hellip; this can take a minute or two.</div>
+    </div>
+    <div id="answer-error" role="alert"></div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="card hidden" id="step-report" style="max-width: 820px;">
+    <h2>Production readiness report</h2>
+    <div class="example-banner hidden" id="example-banner">Example report. InfraLoop produced this for a real public project (Google&rsquo;s Online Boutique demo: 12 services, Kubernetes, Terraform), with the answers shown in the report. Nothing here is made up for the demo.</div>
+    <div class="report-body" id="report-text"></div>
+    <button class="secondary" id="report-back" onclick="goBack('questions')">&larr; Back to questions</button>
+    <button class="secondary" id="report-dl-md" onclick="downloadReport('md')">Download .md</button>
+    <button class="secondary" id="report-dl-json" onclick="downloadReport('json')">Download .json</button>
+    <button id="report-new" onclick="location.reload()">New scan</button>
+    <button class="secondary hidden" id="report-contact" onclick="openProfile()">Want this for your repo? Get in touch</button>
+  </div>
+  </main>
+
+  <section class="info" aria-label="What you get">
+    <h3>What you get</h3>
+    <div class="grid">
+      <div class="tile"><h4>Gaps found in your repo</h4><p>A table of what is missing (tests, CI, backups, monitoring, secrets), each with the evidence from your files and a severity.</p></div>
+      <div class="tile"><h4>A recommended setup</h4><p>Which platform fits your scale and budget, and why, with the alternatives you did not pick.</p></div>
+      <div class="tile"><h4>A monthly cost</h4><p>Calculated from list prices for the setup it recommends, and checked against your budget.</p></div>
+    </div>
+    <p class="not">InfraLoop writes a report. It does not connect to your cloud account, generate code or deploy anything.</p>
+  </section>
+  <section class="next" aria-label="Coming next">
+    <span class="tag">Coming next &middot; expected December 2026</span>
+    <h3>After the report: an agent that sees outages coming</h3>
+    <p>InfraLoop checks your project before launch. The next product is meant for after launch: a continuous, non-invasive agent for your Kubernetes cluster that reads live metrics, events and the dependency graph, and flags a failure while it is still a trend, before it becomes an outage. For each warning it gives the likely root cause and a concrete fix: a <code>kubectl</code> patch, a manifest override or a code change.</p>
+    <div class="grid">
+      <div class="tile"><h4>Memory leaks</h4><p>Memory that keeps climbing after each release, caught long before the OOM kill.</p></div>
+      <div class="tile"><h4>Disk exhaustion</h4><p>A volume that will fill up, with the date it is expected to run out.</p></div>
+      <div class="tile"><h4>Autoscaling saturation</h4><p>An HPA that is about to hit its maximum replicas while load is still rising.</p></div>
+      <div class="tile"><h4>Cascading latency</h4><p>A slow dependency that is about to drag its callers down with it.</p></div>
+    </div>
+    <div class="roadmap">
+      <h4>Also on the roadmap for InfraLoop</h4>
+      <ul>
+        <li>Writes the infrastructure files for you: a Dockerfile and Terraform for the setup it recommends, ready for you to review before you use them.</li>
+        <li>Higher accuracy in the current report: more real-world projects tested, and every finding checked against evidence from your files.</li>
+      </ul>
+    </div>
+    <p class="fine">Read-only access to telemetry, no changes to your cluster unless you apply a suggested fix yourself. Interested? Use the contact button at the top.</p>
+  </section>
+  <footer>Private review preview. Files you upload are deleted right after the scan, secret files are never uploaded, and nothing on this page is tracked. <br />Cost figures are estimates from list prices at the time of the scan. Parts of the report are written by an AI model; check the evidence column before you act on a finding.</footer>
+
+  </div>
+
+  <div class="drawer-overlay" id="drawer-overlay" onclick="closeProfile()"></div>
+  <aside class="profile-drawer" id="profile-drawer" role="dialog" aria-modal="true" aria-labelledby="p-title" aria-hidden="true">
+    <div class="drawer-head"><h2 id="p-title">About the builder</h2><button type="button" class="drawer-close" id="drawer-close" onclick="closeProfile()" aria-label="Close">&times;</button></div>
+    <div>
+      <div class="avatar" id="p-avatar" aria-hidden="true">DS</div>
+      <h3 class="p-name" id="p-name">Dhruvil Satani</h3>
+      <p class="p-role" id="p-role">DevOps &amp; Cloud Platform Engineer</p>
+      <p class="p-bio" id="p-bio">I built InfraLoop to show teams what is missing before production. If you want the infrastructure itself built or reviewed, you can hire me directly.</p>
+    </div>
+    <div class="info-list" id="p-info"></div>
+    <div class="contact-links" id="p-links"></div>
+  </aside>
+
+<script>
+// ---- Your profile: edit these values only. Empty links are hidden. ----
+const PROFILE = {
+  name: "Dhruvil Satani",
+  role: "DevOps & Cloud Platform Engineer",
+  bio: "I built InfraLoop to show teams what is missing before production. If you want the infrastructure itself built or reviewed, you can hire me directly.",
+  info: [
+    ["Focus", "Kubernetes, Terraform, CI/CD, observability"],
+    ["Stack", "Kubernetes | Docker | Helm | Terraform | AWS | Python | GitHub Actions"],
+    ["Education", "MSc Computer Science"],
+    ["Location", "Germany"],
+  ],
+  email: "dhruvilsatani00@gmail.com",
+  github: "https://github.com/dhruvilsatani",
+  linkedin: "",
+};
+(function renderProfile() {
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set("p-name", PROFILE.name); set("p-role", PROFILE.role); set("p-bio", PROFILE.bio);
+  set("p-avatar", PROFILE.name.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase());
+  const info = document.getElementById("p-info");
+  PROFILE.info.forEach(([k, v]) => {
+    const d = document.createElement("div"); d.className = "info-item";
+    const a = document.createElement("div"); a.className = "info-label"; a.textContent = k;
+    const b = document.createElement("div"); b.className = "info-value"; b.textContent = v;
+    d.append(a, b); info.appendChild(d);
+  });
+  const links = document.getElementById("p-links");
+  const add = (label, href, primary) => {
+    if (!href) return;
+    const a = document.createElement("a"); a.textContent = label; a.href = href;
+    if (primary) a.className = "primary"; else { a.target = "_blank"; a.rel = "noopener noreferrer"; }
+    links.appendChild(a);
+  };
+  add("Email me", PROFILE.email ? "mailto:" + PROFILE.email : "", true);
+  add("GitHub", PROFILE.github); add("LinkedIn", PROFILE.linkedin);
+  const mail = document.createElement("div"); mail.className = "info-item";
+  if (PROFILE.email) {
+    mail.innerHTML = '<div class="info-label">Email</div>';
+    const v = document.createElement("div"); v.className = "info-value"; v.textContent = PROFILE.email; mail.appendChild(v);
+    info.appendChild(mail);
+  }
+})();
+let lastFocus = null;
+function openProfile() {
+  lastFocus = document.activeElement;
+  const d = document.getElementById("profile-drawer");
+  d.classList.add("active"); d.setAttribute("aria-hidden", "false");
+  document.getElementById("drawer-overlay").classList.add("active");
+  document.getElementById("drawer-close").focus();
+}
+function closeProfile() {
+  const d = document.getElementById("profile-drawer");
+  d.classList.remove("active"); d.setAttribute("aria-hidden", "true");
+  document.getElementById("drawer-overlay").classList.remove("active");
+  if (lastFocus && lastFocus.focus) lastFocus.focus();
+}
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeProfile(); });
+</script>
+<script>
+// ---- Example report (and showcase mode for a static, always-on page) ----
+async function showExample() {
+  try {
+    const res = await fetch("/assets/example-report.md");
+    if (!res.ok) throw new Error("example not found");
+    const html = marked.parse(await res.text());
+    document.getElementById("report-text").innerHTML = window.DOMPurify ? DOMPurify.sanitize(html) : "";
+    document.getElementById("example-banner").classList.remove("hidden");
+    ["step-scan", "step-questions"].forEach(id => document.getElementById(id).classList.add("hidden"));
+    document.getElementById("step-report").classList.remove("hidden");
+    setStep("report");
+    document.getElementById("step-report").scrollIntoView({behavior: "smooth", block: "start"});
+    const showcase = !!window.SHOWCASE;
+    document.getElementById("report-back").classList.toggle("hidden", showcase);
+    document.getElementById("report-new").classList.toggle("hidden", showcase);
+    document.getElementById("report-contact").classList.toggle("hidden", !showcase);
+    if (!showcase) { document.getElementById("report-back").onclick = () => { document.getElementById("example-banner").classList.add("hidden"); goBack("scan"); }; document.getElementById("report-back").innerHTML = "&larr; Back"; }
+  } catch (e) {
+    showScanError("Could not load the example report.");
+  }
+}
+document.addEventListener("DOMContentLoaded", () => {
+  if (!window.SHOWCASE) return;
+  document.querySelector(".steps").classList.add("hidden");
+  document.getElementById("step-scan").classList.add("hidden");
+  const info = document.querySelector(".info"); if (info) info.querySelector(".not").textContent = "InfraLoop writes a report. It does not connect to your cloud account, generate code or deploy anything. The live tool is available on request.";
+  showExample();
+});
+</script>
+<script>
+let sessionId = null;
+
+// ---------------------------------------------------------------- folder upload
+// Mirrors uploads.py; the server re-checks everything, this only saves bandwidth and keeps secrets off the wire.
+const SKIP_DIRS = new Set([".git","node_modules",".venv","venv","__pycache__",".pytest_cache",".mypy_cache",".ruff_cache",".tox",".next",".nuxt",".svelte-kit",".gradle",".terraform",".idea",".cache","bower_components","Pods",".dart_tool","target","dist","coverage","vendor",".parcel-cache",".turbo",".yarn",".pnpm-store","site-packages"]);
+const BINARY_EXT = new Set([".png",".jpg",".jpeg",".gif",".bmp",".ico",".webp",".svg",".pdf",".zip",".gz",".tgz",".tar",".bz2",".xz",".7z",".rar",".jar",".war",".class",".so",".dll",".dylib",".exe",".bin",".o",".a",".pyc",".woff",".woff2",".ttf",".otf",".eot",".mp3",".mp4",".mov",".avi",".wav",".webm",".onnx",".pt",".pth",".h5",".pkl",".parquet",".sqlite",".db",".dmp",".iso",".dmg",".pptx",".docx",".xlsx"]);
+const SECRET_RE = /^(\.env(\..+)?|.*\.pem|.*\.key|.*\.p12|.*\.pfx|.*\.jks|.*\.keystore|id_(rsa|dsa|ecdsa|ed25519)(\.pub)?|\.npmrc|\.pypirc|\.netrc|credentials(\.json)?|service[-_]account.*\.json|.*\.tfvars|secrets?\.(ya?ml|json|toml)|.*\.kdbx)$/i;
+const SECRET_OK_RE = /\.(example|sample|template|dist|defaults?)$/i;
+const MAX_FILE = 1024 * 1024;
+const MAX_FILES_CLIENT = 100000;
+const TEXT_BUDGET = 100 * 1024 * 1024;   // server stores at most 120 MB of text; stay below it
+const CONFIG_RE = /(^|\/)(dockerfile[^\/]*|docker-compose[^\/]*|compose\.ya?ml|makefile|jenkinsfile|package\.json|pyproject\.toml|requirements[^\/]*\.txt|go\.mod|pom\.xml|build\.gradle(\.kts)?|cargo\.toml|gemfile|composer\.json|chart\.ya?ml|values[^\/]*\.ya?ml|readme[^\/]*)$|\.(ya?ml|tf|tfvars|toml|ini|cfg|conf|properties|hcl|gradle|json)$/i;
+let picked = null;   // {root, files:[{path, file, kind}], skipped:{dir:count}, secrets:[names], bytes}
+
+function classifyFile(relInsideProject, size) {
+  const parts = relInsideProject.split("/");
+  const hit = parts.slice(0, -1).find(p => SKIP_DIRS.has(p));
+  if (hit) return {kind: "skip", dir: hit};
+  const name = parts[parts.length - 1];
+  if (SECRET_RE.test(name) && !SECRET_OK_RE.test(name)) return {kind: "placeholder", secret: true};
+  const dot = name.lastIndexOf(".");
+  const ext = dot > 0 ? name.slice(dot).toLowerCase() : "";
+  if (BINARY_EXT.has(ext) || size > MAX_FILE) return {kind: "placeholder"};
+  return {kind: "send"};
+}
+
+function newPick(root) { return {root, files: [], skipped: {}, secrets: [], bytes: 0, tooMany: false}; }
+
+function addToPick(p, fullPath, file) {
+  const parts = fullPath.split("/");
+  const inside = parts.slice(1).join("/");
+  if (!inside) return;
+  const c = classifyFile(inside, file.size);
+  if (c.kind === "skip") { p.skipped[c.dir] = (p.skipped[c.dir] || 0) + 1; return; }
+  if (p.files.length >= MAX_FILES_CLIENT) { p.tooMany = true; return; }
+  if (c.secret) p.secrets.push(parts[parts.length - 1]);
+  if (c.kind === "send") p.bytes += file.size;
+  p.files.push({path: fullPath, file, kind: c.kind});
+}
+
+function pickFromInput(fileList) {
+  if (!fileList.length) return;
+  const first = fileList[0].webkitRelativePath || fileList[0].name;
+  const p = newPick(first.split("/")[0]);
+  for (const f of fileList) addToPick(p, f.webkitRelativePath || f.name, f);
+  setPicked(p);
+}
+
+// dropped folder: walk it ourselves so node_modules etc. are never even opened
+async function readEntries(reader) {
+  const all = [];
+  while (true) {
+    const batch = await new Promise((res, rej) => reader.readEntries(res, rej));
+    if (!batch.length) break;
+    all.push(...batch);
+  }
+  return all;
+}
+async function walkEntry(entry, p, depth) {
+  if (p.files.length >= MAX_FILES_CLIENT) { p.tooMany = true; return; }
+  if (entry.isFile) {
+    const file = await new Promise((res, rej) => entry.file(res, rej));
+    addToPick(p, entry.fullPath.replace(/^\//, ""), file);
+  } else if (entry.isDirectory && depth < 40) {
+    if (depth > 0 && SKIP_DIRS.has(entry.name)) { p.skipped[entry.name] = (p.skipped[entry.name] || 0) + 1; return; }
+    for (const child of await readEntries(entry.createReader())) await walkEntry(child, p, depth + 1);
+  }
+}
+async function pickFromDrop(dt) {
+  const item = [...dt.items].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).find(e => e && e.isDirectory);
+  if (!item) { showScanError("Please drop a folder, not a single file."); return; }
+  const p = newPick(item.name);
+  const summary = document.getElementById("upload-summary");
+  summary.classList.remove("hidden"); summary.innerHTML = '<span class="dim">Reading folder…</span>';
+  await walkEntry(item, p, 0);
+  setPicked(p);
+}
+
+function fmtMB(b) { return (b / 1048576).toFixed(b < 1048576 * 10 ? 1 : 0) + " MB"; }
+
+function setPicked(p) {
+  const box = document.getElementById("upload-summary");
+  if (!p || !p.files.length) {
+    picked = null;
+    box.classList.remove("hidden");
+    box.innerHTML = '<span class="dim">No usable files found in that folder.</span>';
+    return;
+  }
+  picked = p;
+  const sent = p.files.filter(f => f.kind === "send").length;
+  const skippedTxt = Object.entries(p.skipped).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([d, n]) => `${esc(d)}${n > 1 ? " (" + n + " files)" : ""}`).join(", ");
+  const secrets = [...new Set(p.secrets)].slice(0, 6).map(esc).join(", ");
+  box.classList.remove("hidden");
+  box.innerHTML =
+    `<div><span class="ok">&#10003; ${esc(p.root)}</span> &mdash; ${sent} files will be read (${fmtMB(p.bytes)})</div>` +
+    (skippedTxt ? `<div class="dim">Skipped: ${skippedTxt}</div>` : "") +
+    (secrets ? `<div class="dim">Secret files kept private (content not sent): ${secrets}</div>` : "") +
+    (p.tooMany ? `<div class="error-box">Folder is very large; only the first ${MAX_FILES_CLIENT} files are used.</div>` : "") +
+    `<div><a href="#" onclick="clearPicked();return false;" style="color:var(--accent-1)">Remove</a></div>`;
+}
+function clearPicked() {
+  picked = null;
+  document.getElementById("folder-input").value = "";
+  const box = document.getElementById("upload-summary");
+  box.classList.add("hidden"); box.innerHTML = "";
+}
+function showScanError(msg) { document.getElementById("scan-error").innerHTML = `<div class="error-box">${esc(msg)}</div>`; }
+
+// Very large project: keep every config/infra file in full, and send only the NAMES of the biggest source files.
+// The scan still sees which languages, tests and folders exist; it just does not read those source files.
+function fitToBudget(p) {
+  let total = p.files.reduce((n, f) => n + (f.kind === "send" ? f.file.size : 0), 0);
+  if (total <= TEXT_BUDGET) return 0;
+  const code = p.files.filter(f => f.kind === "send" && !CONFIG_RE.test(f.path)).sort((a, b) => b.file.size - a.file.size);
+  let trimmed = 0;
+  for (const f of code) {
+    if (total <= TEXT_BUDGET) break;
+    total -= f.file.size; f.kind = "placeholder"; trimmed++;
+  }
+  return trimmed;
+}
+
+async function uploadPicked(setStatus) {
+  const trimmed = fitToBudget(picked);
+  if (trimmed) setStatus(`Large project: ${trimmed} of the biggest source files are sent by name only…`);
+  const start = await fetch("/upload/start", {method: "POST"});
+  if (!start.ok) throw new Error("Could not start the upload");
+  const {upload_id} = await start.json();
+  let batch = [], batchBytes = 0, done = 0;
+  const total = picked.files.length;
+  const flush = async () => {
+    if (!batch.length) return;
+    const res = await fetch(`/upload/${upload_id}/files`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({files: batch})});
+    if (!res.ok) { let d = "Upload failed"; try { d = (await res.json()).detail || d; } catch (e) {} throw new Error(d); }
+    done += batch.length; batch = []; batchBytes = 0;
+    setStatus(`Uploading project… ${done} / ${total} files`);
+  };
+  for (const f of picked.files) {
+    const text = f.kind === "send" ? await f.file.text() : "";
+    batch.push({path: f.path, text});
+    batchBytes += text.length;
+    if (batch.length >= 300 || batchBytes > 3 * 1024 * 1024) await flush();
+  }
+  await flush();
+  return upload_id;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const drop = document.getElementById("drop");
+  document.getElementById("folder-input").addEventListener("change", e => pickFromInput(e.target.files));
+  ["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", e => { pickFromDrop(e.dataTransfer).catch(err => showScanError("Could not read that folder: " + err.message)); });
+  // a folder dropped anywhere else on the page should not make the browser open the files
+  ["dragover", "drop"].forEach(ev => window.addEventListener(ev, e => e.preventDefault()));
+});
+
+
+function setStep(name) {
+  ["scan", "questions", "report"].forEach(s => {
+    document.getElementById("dot-" + s).classList.toggle("active", s === name);
+  });
+}
+
+// Back keeps everything already typed or selected; only the visible step changes
+function goBack(to) {
+  ["scan", "questions", "report"].forEach(s => document.getElementById("step-" + s).classList.toggle("hidden", s !== to));
+  setStep(to);
+}
+
+function esc(t) { return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+// questions are objects {id, question, kind: text|choice, options, depends_on, optional}; plain strings still work
+function renderQuestions(list) {
+  const qDiv = document.getElementById("questions");
+  qDiv.innerHTML = "";
+  list.forEach(q => {
+    if (typeof q === "string") q = {id: q, question: q, kind: "text"};
+    const box = document.createElement("div");
+    box.className = "q";
+    box.dataset.id = q.id;
+    box.dataset.question = q.question;
+    if (q.depends_on) { box.dataset.dependsId = q.depends_on.id; box.dataset.dependsNot = q.depends_on.not; box.classList.add("hidden"); }
+    const tag = q.optional ? '<em class="optional-tag">(optional)</em>' : "";
+    let body;
+    if (q.kind === "choice") {
+      body = '<div class="choices">' + q.options.map(o => `<button type="button" class="choice" data-value="${esc(o)}">${esc(o)}</button>`).join("") + "</div>";
+    } else {
+      body = '<input type="text" />';
+    }
+    box.innerHTML = `<label><span>${esc(q.question)} ${tag}</span>${body}</label>`;
+    qDiv.appendChild(box);
+  });
+  qDiv.querySelectorAll(".choice").forEach(btn => btn.addEventListener("click", () => {
+    btn.parentElement.querySelectorAll(".choice").forEach(b => b.classList.remove("selected"));
+    btn.classList.add("selected");
+    updateVisibility();
+  }));
+  updateVisibility();
+}
+
+function updateVisibility() {
+  document.querySelectorAll("#questions .q[data-depends-id]").forEach(box => {
+    const parent = document.querySelector(`#questions .q[data-id="${box.dataset.dependsId}"] .choice.selected`);
+    box.classList.toggle("hidden", !(parent && parent.dataset.value !== box.dataset.dependsNot));
+  });
+}
+
+async function startScan() {
+  const repo = document.getElementById("repo-input").value.trim();
+  const errBox = document.getElementById("scan-error");
+  errBox.innerHTML = "";
+  if (!repo && !picked) { showScanError("Paste a repository link or path, or choose your project folder."); return; }
+
+  document.getElementById("scan-btn").disabled = true;
+  document.getElementById("scan-loading").classList.remove("hidden");
+  const statusEl = document.querySelector("#scan-loading .loading-status");
+
+  try {
+    let payload = {repo_path_or_url: repo, notes: document.getElementById("notes-input").value};
+    if (picked) {
+      statusEl.textContent = "Uploading project…";
+      const uploadId = await uploadPicked(t => { statusEl.textContent = t; });
+      payload = {repo_path_or_url: "", upload_id: uploadId, notes: document.getElementById("notes-input").value};
+      statusEl.textContent = "Scanning project structure…";
+    }
+    const res = await fetch("/scan", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || "Scan failed");
+    }
+    const data = await res.json();
+    sessionId = data.session_id;
+
+    renderQuestions(data.questions);
+
+    document.getElementById("step-scan").classList.add("hidden");
+    document.getElementById("step-questions").classList.remove("hidden");
+    setStep("questions");
+  } catch (e) {
+    errBox.innerHTML = `<div class="error-box">${esc(e.message)}</div>`;
+  } finally {
+    document.getElementById("scan-btn").disabled = false;
+    document.getElementById("scan-loading").classList.add("hidden");
+  }
+}
+
+async function submitAnswers() {
+  const answers = {};
+  document.querySelectorAll("#questions .q").forEach(box => {
+    if (box.classList.contains("hidden")) return;
+    const key = box.dataset.question;
+    const sel = box.querySelector(".choice.selected");
+    const inp = box.querySelector("input[type=text]");
+    const value = sel ? sel.dataset.value : (inp ? inp.value.trim() : "");
+    if (value) answers[key] = value;
+  });
+
+  const errBox = document.getElementById("answer-error");
+  errBox.innerHTML = "";
+  // soft check: the report is generic without these. Warn once, then let the user go on.
+  const missing = [];
+  document.querySelectorAll("#questions .q").forEach(box => {
+    if (box.classList.contains("hidden")) return;
+    const q = box.dataset.question.toLowerCase();
+    if (!answers[box.dataset.question] && (q.includes("budget") || q.includes("your database") || q.includes("downtime"))) {
+      missing.push(q.includes("budget") ? "budget" : q.includes("database") ? "database" : "downtime");
+    }
+  });
+  if (missing.length && !window.__warnedMissing) {
+    window.__warnedMissing = true;
+    errBox.innerHTML = `<div class="error-box">Not answered: ${missing.join(", ")}. Without these the report stays generic (no budget check, no database advice). Press Generate Report again to continue anyway.</div>`;
+    return;
+  }
+  document.getElementById("answer-btn").disabled = true;
+  document.getElementById("report-loading").classList.remove("hidden");
+
+  try {
+    const res = await fetch("/answer", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({session_id: sessionId, answers: answers, mode: document.getElementById("offline-mode").checked ? "offline" : ""}),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || "Report generation failed");
+    }
+    const data = await res.json();
+
+    if (data.status === "need_more_info") {
+      renderQuestions(data.questions);
+      // stay on step 2 -- more answers needed before a report can be written
+    } else {
+      lastReport = data.report;
+      const html = marked.parse(data.report);
+      document.getElementById("report-text").innerHTML = window.DOMPurify ? DOMPurify.sanitize(html) : esc(data.report);
+      document.getElementById("step-questions").classList.add("hidden");
+      document.getElementById("step-report").classList.remove("hidden");
+      setStep("report");
+    }
+  } catch (e) {
+    errBox.innerHTML = `<div class="error-box">${e.message}</div>`;
+  } finally {
+    document.getElementById("answer-btn").disabled = false;
+    document.getElementById("report-loading").classList.add("hidden");
+  }
+}
+</script>
+<script>
+// Background: Gemini's particle field (300 cyan points, slow rotation, mouse parallax), with safety guards.
+document.addEventListener("DOMContentLoaded", () => {
+  const video = document.getElementById("globe-video");
+  if (video) video.addEventListener("canplay", () => video.classList.add("ready"));
+});
+(function () {
+  try {
+    if (!window.THREE) return;
+    const canvas = document.getElementById("webgl-bg");
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({canvas, alpha: true, antialias: true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const geo = new THREE.BufferGeometry();
+    const count = 300, positions = new Float32Array(count * 3);
+    for (let i = 0; i < count * 3; i++) positions[i] = (Math.random() - 0.5) * 100;
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const particles = new THREE.Points(geo, new THREE.PointsMaterial({size: 0.5, color: 0x22d3ee, transparent: true, opacity: 0.3}));
+    scene.add(particles);
+    camera.position.z = 30;
+    let mouseX = 0, mouseY = 0, running = true;
+    window.addEventListener("mousemove", e => { mouseX = (e.clientX / window.innerWidth - 0.5) * 0.3; mouseY = (e.clientY / window.innerHeight - 0.5) * 0.3; });
+    function animate() {
+      if (!running) return;
+      requestAnimationFrame(animate);
+      particles.rotation.y -= 0.0005;
+      camera.position.x += (mouseX * 8 - camera.position.x) * 0.05;
+      camera.position.y += (-mouseY * 8 - camera.position.y) * 0.05;
+      camera.lookAt(scene.position);
+      renderer.render(scene, camera);
+    }
+    if (reduce) renderer.render(scene, camera); else animate();
+    document.addEventListener("visibilitychange", () => { const was = running; running = !document.hidden; if (running && !was && !reduce) animate(); });
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      if (reduce) renderer.render(scene, camera);
+    });
+  } catch (e) { /* decorative only */ }
+})();
+
+let lastReport = "";
+function downloadReport(kind) {
+  if (!lastReport) return;
+  const day = new Date().toISOString().slice(0, 10);
+  const body = kind === "json"
+    ? JSON.stringify({tool: "InfraLoop", generated: day, format: "markdown", report: lastReport}, null, 2)
+    : lastReport;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([body], {type: kind === "json" ? "application/json" : "text/markdown"}));
+  a.download = `infraloop-report-${day}.${kind === "json" ? "json" : "md"}`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+</script>
+</body>
+</html>

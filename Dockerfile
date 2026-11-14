@@ -1,0 +1,22 @@
+FROM python:3.12-slim
+
+# git is needed to clone public GitHub repos
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+# run as a normal user; the app only writes its small sqlite file and temp upload folders
+RUN useradd --create-home --uid 10001 app && chown -R app:app /app
+USER app
+
+ENV INFRALOOP_PUBLIC=1 \
+    PYTHONUNBUFFERED=1
+
+EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=5s CMD python -c "import urllib.request;urllib.request.urlopen('http://localhost:8000/',timeout=4)" || exit 1
+CMD ["python", "-m", "uvicorn", "web.api:app", "--host", "0.0.0.0", "--port", "8000"]

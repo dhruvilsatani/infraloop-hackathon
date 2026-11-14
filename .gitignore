@@ -1,0 +1,31 @@
+# secrets and local settings -- never commit
+.env
+.env.*
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.venv_run/
+venv/
+
+# local databases and scan data
+*.db
+*.db-journal
+.sessions/
+.backup_*/
+results*/
+logs/
+
+# editor and OS files
+.DS_Store
+.vscode/
+.idea/
+
+# scratch files and archives
+*.zip
+plain_test.txt
+sample_hobby_app/
+sample_hobby_app/

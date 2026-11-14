@@ -1,0 +1,66 @@
+{
+ "boutique": {
+  "repo_kind": "application",
+  "must_have": [
+   "in_cluster_redis_without_persistent_volume",
+   "services_without_tests"
+  ],
+  "must_not": [
+   "no_observability",
+   "no_cicd",
+   "no_tests",
+   "no_dockerfile"
+  ],
+  "max_high": 1
+ },
+ "petclinic": {
+  "repo_kind": "application",
+  "must_not": [
+   "no_observability",
+   "no_cicd",
+   "no_tests",
+   "no_dockerfile"
+  ],
+  "max_high": 0,
+  "must_have": [
+   "services_without_tests"
+  ]
+ },
+ "v2": {
+  "repo_kind": "application",
+  "must_not": [
+   "no_observability",
+   "no_cicd",
+   "no_tests",
+   "services_without_tests",
+   "services_without_dockerfile"
+  ],
+  "max_high": 0
+ },
+ "bull": {
+  "repo_kind": "library_or_tool",
+  "must_not": [
+   "no_dockerfile",
+   "compose_redis_without_volume",
+   "no_observability",
+   "no_iac"
+  ],
+  "max_high": 0
+ },
+ "servers": {
+  "must_not": [],
+  "max_high": 0
+ },
+ "opentelemetry-demo": {
+  "repo_kind": "application",
+  "must_have": [
+   "env_file_in_repo"
+  ],
+  "must_not": [
+   "no_cicd",
+   "no_tests",
+   "no_observability"
+  ],
+  "max_high": 0
+ }
+}
