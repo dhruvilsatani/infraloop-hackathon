@@ -1,0 +1,407 @@
+﻿{
+    "targets":  [
+                    {
+                        "id":  "plan-0",
+                        "label":  "Azure Container Apps, 1 replica per service, 1 service, no separate load balancer",
+                        "provider":  "Azure",
+                        "monthly_eur":  23.92,
+                        "zone_ha":  false,
+                        "recommended":  true,
+                        "files":  false,
+                        "note":  "Priced in the report. No infrastructure files for this yet: you still get the basic files and the report.",
+                        "server":  null,
+                        "price_note":  "From Azure\u0027s own price list for West Europe (read 2026-11-14): Container Apps at the full running rate for the whole month, converted to EUR, excluding VAT. Azure charges less while a copy is idle and gives a free allowance each month, so your real bill can be lower. Traffic out of Azure is not included.",
+                        "profile":  "azure_container_apps",
+                        "catch":  "The bill follows how long your copies run, and it is partly tied to Azure.",
+                        "drawbacks":  [
+                                          "The report prices the copies at their full running rate. The real bill can be lower, but it follows your usage.",
+                                          "It works best if your app doesn\u0027t keep files on its own disk.",
+                                          "A database is a separate paid service, not in this price unless the report says so.",
+                                          "It\u0027s partly tied to Azure. Moving later is possible, but it takes work."
+                                      ],
+                        "benefits":  [
+                                         "No servers or clusters to look after: you hand over a container and it runs.",
+                                         "It comes with an HTTPS entry point, so there is no separate load balancer to pay for.",
+                                         "Can add and remove copies as traffic changes, once you set the scaling rules.",
+                                         "Other Azure services, like a managed database, sit in the same account."
+                                     ],
+                        "links":  [
+                                      {
+                                          "label":  "Azure Container Apps",
+                                          "url":  "https://azure.microsoft.com/products/container-apps"
+                                      },
+                                      {
+                                          "label":  "Container Apps pricing",
+                                          "url":  "https://azure.microsoft.com/en-us/pricing/details/container-apps/"
+                                      }
+                                  ],
+                        "short":  "Azure Container Apps",
+                        "why":  [
+
+                                ],
+                        "brief":  "## Your chosen setup: Azure Container Apps, 1 replica per service, 1 service, no separate load balancer\n\n**In plain words.** Microsoft runs your containers for you. There are no machines or clusters to look after, and it comes with its own web address and HTTPS.\n\n**Cost.** About 23.92 EUR per month. From Azure\u0027s own price list for West Europe (read 2026-11-14): Container Apps at the full running rate for the whole month, converted to EUR, excluding VAT. Azure charges less while a copy is idle and gives a free allowance each month, so your real bill can be lower. Traffic out of Azure is not included.\n\n**If the machine or its data centre has a problem:** this stops until it\u0027s fixed or recreated, because everything runs in one place.\n\n**What you get**\n\n- No servers or clusters to look after: you hand over a container and it runs.\n- It comes with an HTTPS entry point, so there is no separate load balancer to pay for.\n- Can add and remove copies as traffic changes, once you set the scaling rules.\n- Other Azure services, like a managed database, sit in the same account.\n\n**Why it costs what it does.** It costs more than one machine because every copy of your app is paid for each second it runs. The report prices the copies at their full running rate; Azure charges less while a copy is idle and gives a free allowance each month, so your real bill can be lower.\n\n**What you give up**\n\n- The report prices the copies at their full running rate. The real bill can be lower, but it follows your usage.\n- It works best if your app doesn\u0027t keep files on its own disk.\n- A database is a separate paid service, not in this price unless the report says so.\n- It\u0027s partly tied to Azure. Moving later is possible, but it takes work.\n\n**A good fit if:**\n\n- Your team or company already uses Azure\n- A web app or API that doesn\u0027t keep files on its own disk\n- A team that wants no servers or clusters to look after\n\n**Think again if:**\n\n- The app stores important files on its own disk\n- Nobody on the team has used Azure and nobody wants to\n\n**Before you launch**\n\n- Set a budget alert in Azure, so a surprise charge reaches you.\n- Use a separate service principal for deployments with only the permissions it needs.\n- Check where the app writes files and move that elsewhere.\n- Try a deploy in a test subscription first.\n\n**What the download adds for this choice:** no infrastructure files exist for it yet, but you still get the basic files.\n\n**Links**\n\n- [Azure Container Apps](https://azure.microsoft.com/products/container-apps)\n- [Container Apps pricing](https://azure.microsoft.com/en-us/pricing/details/container-apps/)\n"
+                    },
+                    {
+                        "id":  "hetzner-server",
+                        "label":  "One Hetzner Cloud server (CPX02: 1 vCPU, 1 GB RAM), excl. VAT",
+                        "provider":  "Hetzner",
+                        "monthly_eur":  6.49,
+                        "zone_ha":  false,
+                        "recommended":  false,
+                        "files":  true,
+                        "note":  "Cheapest. One machine, so no survival of a server or zone outage. Files: Terraform, docker-compose and a reverse proxy.",
+                        "server":  {
+                                       "name":  "CPX02",
+                                       "vcpu":  1,
+                                       "ram":  1,
+                                       "eur":  6.49,
+                                       "locations":  "FSN1/NBG1/HEL1",
+                                       "retrieved":  "2026-10-24"
+                                   },
+                        "profile":  "hetzner",
+                        "catch":  "Only one machine: if it breaks, your app stays down until you fix it, and updates and backups are on you.",
+                        "drawbacks":  [
+                                          "If the machine breaks or restarts, your app is down until you sort it out. Nothing switches over by itself.",
+                                          "Updates and security patches are yours to install.",
+                                          "Backups are off unless you turn them on, and Hetzner charges extra for them.",
+                                          "It can\u0027t grow by itself: a sudden rush makes it slow, and a bigger project will outgrow one machine."
+                                      ],
+                        "benefits":  [
+                                         "The lowest price in this list.",
+                                         "Easy to understand: one machine runs your app, with no cluster or extra services to learn.",
+                                         "A simple bill: it is mostly the price of the one machine you rent.",
+                                         "Quick to set up: the download has what it takes to create the server and start your app.",
+                                         "No lock-in: your app runs in plain Docker, so you can move it to another provider later."
+                                     ],
+                        "links":  [
+                                      {
+                                          "label":  "Hetzner Cloud: servers and prices",
+                                          "url":  "https://www.hetzner.com/cloud/"
+                                      }
+                                  ],
+                        "short":  "one Hetzner server",
+                        "why":  [
+
+                                ],
+                        "brief":  "## Your chosen setup: One Hetzner Cloud server (CPX02: 1 vCPU, 1 GB RAM), excl. VAT\n\n**In plain words.** You rent one small computer in a data centre and your app runs on it. It\u0027s like renting a flat yourself instead of staying in a hotel with staff.\n\n**Cost.** About 6.49 EUR per month, from the report\u0027s price table (prices read 2026-10-24). Taxes, traffic charges and anything the report doesn\u0027t list aren\u0027t included.\n\n**If the machine or its data centre has a problem:** this stops until it\u0027s fixed or recreated, because everything runs in one place.\n\n**What you get**\n\n- The lowest price in this list.\n- Easy to understand: one machine runs your app, with no cluster or extra services to learn.\n- A simple bill: it is mostly the price of the one machine you rent.\n- Quick to set up: the download has what it takes to create the server and start your app.\n- No lock-in: your app runs in plain Docker, so you can move it to another provider later.\n\n**Why it costs what it does.** You only pay for the machine. The pricier options also pay for spare copies of your app, for switching over when something fails, and for someone else keeping it all running. Here none of that comes with it, so it costs less and that work lands on you.\n\n**What you give up**\n\n- If the machine breaks or restarts, your app is down until you sort it out. Nothing switches over by itself.\n- Updates and security patches are yours to install.\n- Backups are off unless you turn them on, and Hetzner charges extra for them.\n- It can\u0027t grow by itself: a sudden rush makes it slow, and a bigger project will outgrow one machine.\n\n**A good fit if:**\n\n- A first launch, a side project or an internal tool\n- Small, steady traffic\n- A team that can log into a server and fix things\n\n**Think again if:**\n\n- You\u0027ve promised customers almost no downtime\n- Losing recent data would really hurt\n- Nobody on the team is comfortable with a server\n- Traffic is big or hard to predict\n\n**Before you launch**\n\n- Turn on backups, then restore one to see that it works.\n- Set up an uptime alert, so you hear about it when the site is down.\n- Pick a regular time to install updates.\n- Keep the Terraform files: they can create the same machine again if you lose it (your data is separate).\n\n**How this choice changes the gaps in your report**\n\n- `no_observability`: Matters more on one machine, because nobody restarts it for you. Add an uptime alert before you launch.\n\n**What the download adds for this choice**\n\n- `infra/hetzner/main.tf`\n- `infra/hetzner/variables.tf`\n- `infra/hetzner/outputs.tf`\n- `infra/hetzner/cloud-init.yaml`\n- `infra/hetzner/terraform.tfvars.example`\n- `docker-compose.prod.yml`\n- `deploy/Caddyfile`\n\n**Links**\n\n- [Hetzner Cloud: servers and prices](https://www.hetzner.com/cloud/)\n"
+                    },
+                    {
+                        "id":  "aws-server",
+                        "label":  "One AWS server (EC2 t3.micro: 2 vCPU, 1 GiB RAM, Frankfurt), excl. VAT",
+                        "provider":  "AWS",
+                        "monthly_eur":  12.41,
+                        "zone_ha":  false,
+                        "recommended":  false,
+                        "files":  true,
+                        "note":  "One machine, so no survival of a server or zone outage. Files: Terraform, docker-compose and a reverse proxy.",
+                        "server":  {
+                                       "name":  "t3.micro",
+                                       "vcpu":  2,
+                                       "ram":  1,
+                                       "eur":  12.41,
+                                       "locations":  "eu-central-1",
+                                       "retrieved":  "2026-11-14"
+                                   },
+                        "price_note":  "From AWS\u0027s own price list for Frankfurt (read 2026-11-14): the server, a 20 GB disk and one public IPv4 address, on-demand, converted to EUR, excluding VAT. Traffic out of AWS, backups and anything you add later are not included.",
+                        "profile":  "aws_vm",
+                        "catch":  "Only one machine: if it breaks, your app stays down until you fix it. It is also more to set up than a plain server, and the bill has more parts, such as traffic out of AWS.",
+                        "drawbacks":  [
+                                          "If the machine breaks or restarts, your app is down until you sort it out. Nothing switches over by itself.",
+                                          "Updates and security patches are yours to install, and backups are not switched on.",
+                                          "More to set up than a plain server: an AWS account, access keys and a default network in your region.",
+                                          "The bill has more parts than one price: traffic out of AWS and backups cost extra, and long heavy CPU use costs extra on this kind of machine.",
+                                          "It can\u0027t grow by itself: a sudden rush makes it slow, and a bigger project will outgrow one machine."
+                                      ],
+                        "benefits":  [
+                                         "The biggest cloud: if you later need a managed database, file storage or more servers, they live in the same account.",
+                                         "The same simple idea as one server: one machine, with no cluster to learn.",
+                                         "The download creates the server, its firewall rules and a fixed IP address, and starts your app.",
+                                         "You pay by the hour, and one command removes everything again."
+                                     ],
+                        "links":  [
+                                      {
+                                          "label":  "Amazon EC2 (virtual servers)",
+                                          "url":  "https://aws.amazon.com/ec2/"
+                                      },
+                                      {
+                                          "label":  "EC2 on-demand prices",
+                                          "url":  "https://aws.amazon.com/ec2/pricing/on-demand/"
+                                      }
+                                  ],
+                        "short":  "one AWS server",
+                        "why":  [
+
+                                ],
+                        "brief":  "## Your chosen setup: One AWS server (EC2 t3.micro: 2 vCPU, 1 GiB RAM, Frankfurt), excl. VAT\n\n**In plain words.** You rent one virtual computer from Amazon, in their Frankfurt data centre, and your app runs on it. It is the same idea as the cheap single server, but on the biggest cloud, so AWS services are close by when you need them later.\n\n**Cost.** About 12.41 EUR per month. From AWS\u0027s own price list for Frankfurt (read 2026-11-14): the server, a 20 GB disk and one public IPv4 address, on-demand, converted to EUR, excluding VAT. Traffic out of AWS, backups and anything you add later are not included.\n\n**If the machine or its data centre has a problem:** this stops until it\u0027s fixed or recreated, because everything runs in one place.\n\n**What you get**\n\n- The biggest cloud: if you later need a managed database, file storage or more servers, they live in the same account.\n- The same simple idea as one server: one machine, with no cluster to learn.\n- The download creates the server, its firewall rules and a fixed IP address, and starts your app.\n- You pay by the hour, and one command removes everything again.\n\n**Why it costs what it does.** You pay for one machine, a small disk and a fixed public address, billed by the hour. There are no spare copies of your app and no managed services in that price, so anything you add later (a managed database, a load balancer, backups) is extra.\n\n**What you give up**\n\n- If the machine breaks or restarts, your app is down until you sort it out. Nothing switches over by itself.\n- Updates and security patches are yours to install, and backups are not switched on.\n- More to set up than a plain server: an AWS account, access keys and a default network in your region.\n- The bill has more parts than one price: traffic out of AWS and backups cost extra, and long heavy CPU use costs extra on this kind of machine.\n- It can\u0027t grow by itself: a sudden rush makes it slow, and a bigger project will outgrow one machine.\n\n**A good fit if:**\n\n- Your team or company already uses AWS\n- You may want AWS services next to the app later, like a managed database or file storage\n- Small, steady traffic\n\n**Think again if:**\n\n- You\u0027ve promised customers almost no downtime\n- Nobody on the team is comfortable with a server\n- Price is your main concern: compare it with the other single-server option in this list\n\n**Before you launch**\n\n- Set a billing alert in AWS, so a surprise charge reaches you.\n- Use a separate AWS user or role for Terraform with only the permissions it needs, not your root account.\n- Turn on snapshots (backups) of the disk, then restore one to see that it works.\n- Set up an uptime alert, so you hear about it when the site is down.\n\n**How this choice changes the gaps in your report**\n\n- `no_observability`: Matters more on one machine, because nobody restarts it for you. Add an uptime alert before you launch.\n\n**What the download adds for this choice**\n\n- `infra/aws/main.tf`\n- `infra/aws/variables.tf`\n- `infra/aws/outputs.tf`\n- `infra/aws/cloud-init.yaml`\n- `infra/aws/terraform.tfvars.example`\n- `docker-compose.prod.yml`\n- `deploy/Caddyfile`\n\n**Links**\n\n- [Amazon EC2 (virtual servers)](https://aws.amazon.com/ec2/)\n- [EC2 on-demand prices](https://aws.amazon.com/ec2/pricing/on-demand/)\n"
+                    },
+                    {
+                        "id":  "azure-server",
+                        "label":  "One Azure server (VM Standard_B1s: 1 vCPU, 1 GiB RAM, West Europe), excl. VAT",
+                        "provider":  "Azure",
+                        "monthly_eur":  13.32,
+                        "zone_ha":  false,
+                        "recommended":  false,
+                        "files":  true,
+                        "note":  "One machine, so no survival of a server or zone outage. Files: Terraform, docker-compose and a reverse proxy.",
+                        "server":  {
+                                       "name":  "Standard_B1s",
+                                       "vcpu":  1,
+                                       "ram":  1,
+                                       "eur":  13.32,
+                                       "locations":  "westeurope",
+                                       "retrieved":  "2026-11-14"
+                                   },
+                        "price_note":  "From Azure\u0027s own price list for West Europe (read 2026-11-14): the server, a 32 GiB SSD disk and one static public IPv4 address, pay-as-you-go, excluding VAT. Traffic out of Azure, disk operations, backups and anything you add later are not included.",
+                        "profile":  "azure_vm",
+                        "catch":  "Only one machine: if it breaks, your app stays down until you fix it. It is also more to set up than a plain server, and the bill has more parts, such as traffic out of Azure.",
+                        "drawbacks":  [
+                                          "If the machine breaks or restarts, your app is down until you sort it out. Nothing switches over by itself.",
+                                          "Updates and security patches are yours to install, and backups are not switched on.",
+                                          "More to set up than a plain server: an Azure subscription, the Azure CLI login, and a machine size your subscription is allowed to create in that region.",
+                                          "The bill has more parts than one price: traffic out of Azure, disk operations and backups cost extra, and long heavy CPU use slows this kind of machine down.",
+                                          "It can\u0027t grow by itself: a sudden rush makes it slow, and a bigger project will outgrow one machine."
+                                      ],
+                        "benefits":  [
+                                         "Fits well if your company already runs on Microsoft: the same account, sign-in and billing.",
+                                         "The same simple idea as one server: one machine, with no cluster to learn.",
+                                         "The download creates the server, its network, firewall rules and a fixed IP address, and starts your app. Password login is off.",
+                                         "You pay by the hour, and one command removes everything again."
+                                     ],
+                        "links":  [
+                                      {
+                                          "label":  "Azure Virtual Machines",
+                                          "url":  "https://azure.microsoft.com/en-us/products/virtual-machines"
+                                      },
+                                      {
+                                          "label":  "Azure Linux VM prices",
+                                          "url":  "https://azure.microsoft.com/en-us/pricing/details/virtual-machines/linux/"
+                                      }
+                                  ],
+                        "short":  "one Azure server",
+                        "why":  [
+
+                                ],
+                        "brief":  "## Your chosen setup: One Azure server (VM Standard_B1s: 1 vCPU, 1 GiB RAM, West Europe), excl. VAT\n\n**In plain words.** You rent one virtual computer from Microsoft, in their West Europe data centre, and your app runs on it. It is the same idea as the cheap single server, but inside Azure, so Azure services are close by when you need them later.\n\n**Cost.** About 13.32 EUR per month. From Azure\u0027s own price list for West Europe (read 2026-11-14): the server, a 32 GiB SSD disk and one static public IPv4 address, pay-as-you-go, excluding VAT. Traffic out of Azure, disk operations, backups and anything you add later are not included.\n\n**If the machine or its data centre has a problem:** this stops until it\u0027s fixed or recreated, because everything runs in one place.\n\n**What you get**\n\n- Fits well if your company already runs on Microsoft: the same account, sign-in and billing.\n- The same simple idea as one server: one machine, with no cluster to learn.\n- The download creates the server, its network, firewall rules and a fixed IP address, and starts your app. Password login is off.\n- You pay by the hour, and one command removes everything again.\n\n**Why it costs what it does.** You pay for one machine, a small disk and a fixed public address, billed by the hour. There are no spare copies of your app and no managed services in that price, so anything you add later (a managed database, a load balancer, backups) is extra.\n\n**What you give up**\n\n- If the machine breaks or restarts, your app is down until you sort it out. Nothing switches over by itself.\n- Updates and security patches are yours to install, and backups are not switched on.\n- More to set up than a plain server: an Azure subscription, the Azure CLI login, and a machine size your subscription is allowed to create in that region.\n- The bill has more parts than one price: traffic out of Azure, disk operations and backups cost extra, and long heavy CPU use slows this kind of machine down.\n- It can\u0027t grow by itself: a sudden rush makes it slow, and a bigger project will outgrow one machine.\n\n**A good fit if:**\n\n- Your team or company already uses Microsoft Azure or Microsoft 365\n- You may want Azure services next to the app later, like a managed database or file storage\n- Small, steady traffic\n\n**Think again if:**\n\n- You\u0027ve promised customers almost no downtime\n- Nobody on the team is comfortable with a server\n- Price is your main concern: compare it with the other single-server option in this list\n\n**Before you launch**\n\n- Set a budget alert in Azure, so a surprise charge reaches you.\n- Use a separate service principal for Terraform with only the permissions it needs.\n- Turn on backups for the server, then restore one to see that it works.\n- Set up an uptime alert, so you hear about it when the site is down.\n\n**How this choice changes the gaps in your report**\n\n- `no_observability`: Matters more on one machine, because nobody restarts it for you. Add an uptime alert before you launch.\n\n**What the download adds for this choice**\n\n- `infra/azure/main.tf`\n- `infra/azure/variables.tf`\n- `infra/azure/outputs.tf`\n- `infra/azure/cloud-init.yaml`\n- `infra/azure/terraform.tfvars.example`\n- `docker-compose.prod.yml`\n- `deploy/Caddyfile`\n\n**Links**\n\n- [Azure Virtual Machines](https://azure.microsoft.com/en-us/products/virtual-machines)\n- [Azure Linux VM prices](https://azure.microsoft.com/en-us/pricing/details/virtual-machines/linux/)\n"
+                    },
+                    {
+                        "id":  "plan-1",
+                        "label":  "GKE Autopilot, 1 replica per service, 1 service, 1 load balancer",
+                        "provider":  "Google Cloud",
+                        "monthly_eur":  24.42,
+                        "zone_ha":  false,
+                        "recommended":  false,
+                        "files":  false,
+                        "note":  "Priced in the report. No infrastructure files for this yet: you still get the basic files and the report.",
+                        "server":  null,
+                        "profile":  "gke_autopilot",
+                        "catch":  "More to learn and more to pay, and partly tied to Google.",
+                        "drawbacks":  [
+                                          "Someone needs to be comfortable with Kubernetes to deploy and fix things.",
+                                          "It costs more than a single machine, and part of the bill is fixed however little traffic you get.",
+                                          "It\u0027s partly tied to Google. Moving later is possible, but it takes work."
+                                      ],
+                        "benefits":  [
+                                         "If one copy of your app fails, Kubernetes starts a new one for you.",
+                                         "Google looks after the machines underneath, including their updates.",
+                                         "Can grow with your traffic once autoscaling is switched on.",
+                                         "A solid base if you add more services later."
+                                     ],
+                        "links":  [
+                                      {
+                                          "label":  "Google Kubernetes Engine (GKE)",
+                                          "url":  "https://cloud.google.com/kubernetes-engine"
+                                      },
+                                      {
+                                          "label":  "GKE pricing",
+                                          "url":  "https://cloud.google.com/kubernetes-engine/pricing"
+                                      }
+                                  ],
+                        "short":  "GKE Autopilot",
+                        "why":  [
+
+                                ],
+                        "brief":  "## Your chosen setup: GKE Autopilot, 1 replica per service, 1 service, 1 load balancer\n\n**In plain words.** Google runs the machines and keeps several copies of your app running, replacing any that fail. You describe what to run, using Kubernetes.\n\n**Cost.** About 24.42 EUR per month, from the report\u0027s price table (prices read 2026-10-24). Taxes, traffic charges and anything the report doesn\u0027t list aren\u0027t included.\n\n**If the machine or its data centre has a problem:** this stops until it\u0027s fixed or recreated, because everything runs in one place.\n\n**What you get**\n\n- If one copy of your app fails, Kubernetes starts a new one for you.\n- Google looks after the machines underneath, including their updates.\n- Can grow with your traffic once autoscaling is switched on.\n- A solid base if you add more services later.\n\n**Why it costs what it does.** It costs more than one machine because you pay for several copies and for Google doing the operating work. The report\u0027s table shows the parts.\n\n**What you give up**\n\n- Someone needs to be comfortable with Kubernetes to deploy and fix things.\n- It costs more than a single machine, and part of the bill is fixed however little traffic you get.\n- It\u0027s partly tied to Google. Moving later is possible, but it takes work.\n\n**A good fit if:**\n\n- Several services that must keep running when one part fails\n- Traffic that grows and shrinks\n- A team that already knows Kubernetes, or wants to\n\n**Think again if:**\n\n- Nobody on the team knows Kubernetes and nobody wants to\n- It\u0027s a small project with steady, low traffic\n\n**Before you launch**\n\n- Set a budget alert in the cloud account.\n- Try a deploy in a test project first.\n- Make sure the app answers a health check, so Kubernetes can tell when it\u0027s ready.\n\n**What the download adds for this choice:** no infrastructure files exist for it yet, but you still get the basic files.\n\n**Links**\n\n- [Google Kubernetes Engine (GKE)](https://cloud.google.com/kubernetes-engine)\n- [GKE pricing](https://cloud.google.com/kubernetes-engine/pricing)\n"
+                    },
+                    {
+                        "id":  "plan-2",
+                        "label":  "AWS ECS Fargate, 1 task per service, 1 service, 1 Application Load Balancer",
+                        "provider":  "AWS",
+                        "monthly_eur":  35.56,
+                        "zone_ha":  false,
+                        "recommended":  false,
+                        "files":  false,
+                        "note":  "Priced in the report. No infrastructure files for this yet: you still get the basic files and the report.",
+                        "server":  null,
+                        "price_note":  "From AWS\u0027s own price list for Frankfurt (read 2026-11-14): the Fargate tasks, one Application Load Balancer (its fixed hourly fee and its public addresses) and a public address for each task, converted to EUR, excluding VAT. Not included: what the load balancer charges for traffic, traffic out of AWS, backups.",
+                        "profile":  "aws_fargate",
+                        "catch":  "More to set up than one server, the bill has several parts, and it is partly tied to AWS.",
+                        "drawbacks":  [
+                                          "More to set up than one server: a cluster, a service, a load balancer and network settings.",
+                                          "The load balancer costs money every hour, even when nobody visits.",
+                                          "A database or Redis is a separate paid service, not in this price unless the report says so.",
+                                          "It\u0027s partly tied to AWS. Moving later is possible, but it takes work."
+                                      ],
+                        "benefits":  [
+                                         "No servers to look after: you hand AWS a container image and it runs the copies.",
+                                         "If a copy fails, Amazon ECS starts a new one for you.",
+                                         "Other AWS services, like a managed database or secrets storage, sit in the same account.",
+                                         "You can add copies when traffic grows."
+                                     ],
+                        "links":  [
+                                      {
+                                          "label":  "AWS Fargate",
+                                          "url":  "https://aws.amazon.com/fargate/"
+                                      },
+                                      {
+                                          "label":  "Amazon ECS",
+                                          "url":  "https://aws.amazon.com/ecs/"
+                                      },
+                                      {
+                                          "label":  "Fargate pricing",
+                                          "url":  "https://aws.amazon.com/fargate/pricing/"
+                                      }
+                                  ],
+                        "short":  "AWS ECS Fargate",
+                        "why":  [
+
+                                ],
+                        "brief":  "## Your chosen setup: AWS ECS Fargate, 1 task per service, 1 service, 1 Application Load Balancer\n\n**In plain words.** Amazon runs your containers for you, so there are no machines to look after. A load balancer in front sends visitors to whichever copy is healthy.\n\n**Cost.** About 35.56 EUR per month. From AWS\u0027s own price list for Frankfurt (read 2026-11-14): the Fargate tasks, one Application Load Balancer (its fixed hourly fee and its public addresses) and a public address for each task, converted to EUR, excluding VAT. Not included: what the load balancer charges for traffic, traffic out of AWS, backups.\n\n**If the machine or its data centre has a problem:** this stops until it\u0027s fixed or recreated, because everything runs in one place.\n\n**What you get**\n\n- No servers to look after: you hand AWS a container image and it runs the copies.\n- If a copy fails, Amazon ECS starts a new one for you.\n- Other AWS services, like a managed database or secrets storage, sit in the same account.\n- You can add copies when traffic grows.\n\n**Why it costs what it does.** It costs more than one machine because you pay for every copy of your app while it runs, plus a load balancer that has its own fixed fee every hour, and a public address for each of them. The report\u0027s table shows the parts.\n\n**What you give up**\n\n- More to set up than one server: a cluster, a service, a load balancer and network settings.\n- The load balancer costs money every hour, even when nobody visits.\n- A database or Redis is a separate paid service, not in this price unless the report says so.\n- It\u0027s partly tied to AWS. Moving later is possible, but it takes work.\n\n**A good fit if:**\n\n- Your team or company already uses AWS\n- Several services that must keep running when one copy fails\n- A team that wants no servers to patch\n\n**Think again if:**\n\n- Nobody on the team has used AWS and nobody wants to\n- It\u0027s a small project with steady, low traffic: one server costs much less\n\n**Before you launch**\n\n- Set a billing alert in AWS, so a surprise charge reaches you.\n- Use a separate AWS user or role for deployments, not your root account.\n- Make sure the app answers a health check, so the load balancer can tell when a copy is ready.\n- Try a deploy in a test account first.\n\n**What the download adds for this choice:** no infrastructure files exist for it yet, but you still get the basic files.\n\n**Links**\n\n- [AWS Fargate](https://aws.amazon.com/fargate/)\n- [Amazon ECS](https://aws.amazon.com/ecs/)\n- [Fargate pricing](https://aws.amazon.com/fargate/pricing/)\n"
+                    },
+                    {
+                        "id":  "plan-3",
+                        "label":  "Cloud Run always-on, 2 instances per service, 1 service, 1 load balancer",
+                        "provider":  "Google Cloud",
+                        "monthly_eur":  40.88,
+                        "zone_ha":  true,
+                        "recommended":  false,
+                        "files":  false,
+                        "note":  "Priced in the report. No infrastructure files for this yet: you still get the basic files and the report.",
+                        "server":  null,
+                        "profile":  "cloud_run",
+                        "catch":  "The bill grows with traffic, and it\u0027s partly tied to Google.",
+                        "drawbacks":  [
+                                          "The bill follows your usage, and copies that stay on are paid for even when idle.",
+                                          "It works best if your app doesn\u0027t keep files on its own disk.",
+                                          "A database is a separate paid service, not in this price unless the report says so.",
+                                          "It\u0027s partly tied to Google. Moving later is possible, but it takes work."
+                                      ],
+                        "benefits":  [
+                                         "No servers or clusters to look after: you hand over a container and it runs.",
+                                         "Keeps running if one zone of the data centre has a problem, because it has copies in more than one.",
+                                         "Adds and removes copies of your app as traffic goes up and down.",
+                                         "Deploying a new version is just handing over a new container."
+                                     ],
+                        "links":  [
+                                      {
+                                          "label":  "Google Cloud Run",
+                                          "url":  "https://cloud.google.com/run"
+                                      },
+                                      {
+                                          "label":  "Cloud Run pricing",
+                                          "url":  "https://cloud.google.com/run/pricing"
+                                      }
+                                  ],
+                        "short":  "Cloud Run always-on",
+                        "why":  [
+
+                                ],
+                        "brief":  "## Your chosen setup: Cloud Run always-on, 2 instances per service, 1 service, 1 load balancer\n\n**In plain words.** Google runs your container for you. There are no machines or clusters to look after.\n\n**Cost.** About 40.88 EUR per month, from the report\u0027s price table (prices read 2026-10-24). Taxes, traffic charges and anything the report doesn\u0027t list aren\u0027t included.\n\n**If a data centre has a problem:** this keeps running, because it has copies in more than one zone.\n\n**What you get**\n\n- No servers or clusters to look after: you hand over a container and it runs.\n- Keeps running if one zone of the data centre has a problem, because it has copies in more than one.\n- Adds and removes copies of your app as traffic goes up and down.\n- Deploying a new version is just handing over a new container.\n\n**Why it costs what it does.** It costs more than one machine because Google does the operating work, and the report prices copies that stay on all the time.\n\n**What you give up**\n\n- The bill follows your usage, and copies that stay on are paid for even when idle.\n- It works best if your app doesn\u0027t keep files on its own disk.\n- A database is a separate paid service, not in this price unless the report says so.\n- It\u0027s partly tied to Google. Moving later is possible, but it takes work.\n\n**A good fit if:**\n\n- A web app or API that doesn\u0027t keep files on its own disk\n- A team that wants no servers to look after\n- Traffic that goes up and down\n\n**Think again if:**\n\n- The app stores important files on its own disk\n- You need long background jobs in the same container\n\n**Before you launch**\n\n- Set a budget alert in the cloud account.\n- Check where the app writes files and move that elsewhere.\n- Try a deploy in a test project first.\n\n**What the download adds for this choice:** no infrastructure files exist for it yet, but you still get the basic files.\n\n**Links**\n\n- [Google Cloud Run](https://cloud.google.com/run)\n- [Cloud Run pricing](https://cloud.google.com/run/pricing)\n"
+                    },
+                    {
+                        "id":  "plan-4",
+                        "label":  "Azure Container Apps, 2 replicas per service, 1 service, no separate load balancer",
+                        "provider":  "Azure",
+                        "monthly_eur":  47.84,
+                        "zone_ha":  true,
+                        "recommended":  false,
+                        "files":  false,
+                        "note":  "Priced in the report. No infrastructure files for this yet: you still get the basic files and the report.",
+                        "server":  null,
+                        "price_note":  "From Azure\u0027s own price list for West Europe (read 2026-11-14): Container Apps at the full running rate for the whole month, converted to EUR, excluding VAT. Azure charges less while a copy is idle and gives a free allowance each month, so your real bill can be lower. Traffic out of Azure is not included.",
+                        "profile":  "azure_container_apps",
+                        "catch":  "The bill follows how long your copies run, and it is partly tied to Azure.",
+                        "drawbacks":  [
+                                          "The report prices the copies at their full running rate. The real bill can be lower, but it follows your usage.",
+                                          "It works best if your app doesn\u0027t keep files on its own disk.",
+                                          "A database is a separate paid service, not in this price unless the report says so.",
+                                          "It\u0027s partly tied to Azure. Moving later is possible, but it takes work."
+                                      ],
+                        "benefits":  [
+                                         "No servers or clusters to look after: you hand over a container and it runs.",
+                                         "Can keep running if one zone of the data centre has a problem, when the copies are placed in more than one zone (the report says how).",
+                                         "It comes with an HTTPS entry point, so there is no separate load balancer to pay for.",
+                                         "Can add and remove copies as traffic changes, once you set the scaling rules.",
+                                         "Other Azure services, like a managed database, sit in the same account."
+                                     ],
+                        "links":  [
+                                      {
+                                          "label":  "Azure Container Apps",
+                                          "url":  "https://azure.microsoft.com/products/container-apps"
+                                      },
+                                      {
+                                          "label":  "Container Apps pricing",
+                                          "url":  "https://azure.microsoft.com/en-us/pricing/details/container-apps/"
+                                      }
+                                  ],
+                        "short":  "Azure Container Apps",
+                        "why":  [
+
+                                ],
+                        "brief":  "## Your chosen setup: Azure Container Apps, 2 replicas per service, 1 service, no separate load balancer\n\n**In plain words.** Microsoft runs your containers for you. There are no machines or clusters to look after, and it comes with its own web address and HTTPS.\n\n**Cost.** About 47.84 EUR per month. From Azure\u0027s own price list for West Europe (read 2026-11-14): Container Apps at the full running rate for the whole month, converted to EUR, excluding VAT. Azure charges less while a copy is idle and gives a free allowance each month, so your real bill can be lower. Traffic out of Azure is not included.\n\n**If a data centre has a problem:** this keeps running, because it has copies in more than one zone.\n\n**What you get**\n\n- No servers or clusters to look after: you hand over a container and it runs.\n- Can keep running if one zone of the data centre has a problem, when the copies are placed in more than one zone (the report says how).\n- It comes with an HTTPS entry point, so there is no separate load balancer to pay for.\n- Can add and remove copies as traffic changes, once you set the scaling rules.\n- Other Azure services, like a managed database, sit in the same account.\n\n**Why it costs what it does.** It costs more than one machine because every copy of your app is paid for each second it runs. The report prices the copies at their full running rate; Azure charges less while a copy is idle and gives a free allowance each month, so your real bill can be lower.\n\n**What you give up**\n\n- The report prices the copies at their full running rate. The real bill can be lower, but it follows your usage.\n- It works best if your app doesn\u0027t keep files on its own disk.\n- A database is a separate paid service, not in this price unless the report says so.\n- It\u0027s partly tied to Azure. Moving later is possible, but it takes work.\n\n**A good fit if:**\n\n- Your team or company already uses Azure\n- A web app or API that doesn\u0027t keep files on its own disk\n- A team that wants no servers or clusters to look after\n\n**Think again if:**\n\n- The app stores important files on its own disk\n- Nobody on the team has used Azure and nobody wants to\n\n**Before you launch**\n\n- Set a budget alert in Azure, so a surprise charge reaches you.\n- Use a separate service principal for deployments with only the permissions it needs.\n- Check where the app writes files and move that elsewhere.\n- Try a deploy in a test subscription first.\n\n**What the download adds for this choice:** no infrastructure files exist for it yet, but you still get the basic files.\n\n**Links**\n\n- [Azure Container Apps](https://azure.microsoft.com/products/container-apps)\n- [Container Apps pricing](https://azure.microsoft.com/en-us/pricing/details/container-apps/)\n"
+                    },
+                    {
+                        "id":  "other-cloud",
+                        "label":  "A different cloud or platform (Fly.io, Kubernetes on AWS or Azure, your own servers, ...)",
+                        "provider":  "",
+                        "monthly_eur":  null,
+                        "zone_ha":  null,
+                        "recommended":  false,
+                        "files":  false,
+                        "note":  "No infrastructure files for it yet. You still get the basic files; the report\u0027s advice is provider-neutral.",
+                        "server":  null,
+                        "profile":  "other-cloud",
+                        "catch":  "We don\u0027t write the hosting files for it yet, so that part is up to you. The basic files and the report still apply.",
+                        "drawbacks":  [
+                                          "We don\u0027t generate hosting files for that provider yet."
+                                      ],
+                        "benefits":  [
+                                         "You keep the provider you already know."
+                                     ],
+                        "links":  [
+
+                                  ],
+                        "short":  "A different cloud or platform",
+                        "why":  [
+
+                                ],
+                        "brief":  "## Your chosen setup: A different cloud or platform (Fly.io, Kubernetes on AWS or Azure, your own servers, ...)\n\n**In plain words.** You\u0027ll run it somewhere we don\u0027t have files for yet, like Fly.io, Kubernetes on AWS or Azure, or your own servers.\n\n**What you get**\n\n- You keep the provider you already know.\n\n**What you give up**\n\n- We don\u0027t generate hosting files for that provider yet.\n\n**A good fit if:**\n\n- You already have a provider, or your company has a standard\n\n**Before you launch**\n\n- The report\u0027s cost table prices Google Cloud and Hetzner, so use it only as a rough comparison.\n\n**What the download adds for this choice:** no infrastructure files exist for it yet, but you still get the basic files.\n"
+                    },
+                    {
+                        "id":  "not-yet",
+                        "label":  "Not decided yet: just the basic files",
+                        "provider":  "",
+                        "monthly_eur":  null,
+                        "zone_ha":  null,
+                        "recommended":  false,
+                        "files":  true,
+                        "note":  "Dockerfile, CI and the other starter files only.",
+                        "server":  null,
+                        "profile":  "not-yet",
+                        "catch":  "Nothing about hosting is generated until you choose.",
+                        "drawbacks":  [
+
+                                      ],
+                        "benefits":  [
+                                         "You can decide later: the basic files fit any provider."
+                                     ],
+                        "links":  [
+
+                                  ],
+                        "short":  "Not decided yet: just the basic files",
+                        "why":  [
+
+                                ],
+                        "brief":  "## Your chosen setup: Not decided yet: just the basic files\n\n**In plain words.** You haven\u0027t picked a place yet. You get the basic files (Dockerfile, CI and the rest), which work anywhere.\n\n**What you get**\n\n- You can decide later: the basic files fit any provider.\n\n**A good fit if:**\n\n- Still comparing options\n"
+                    }
+                ]
+}

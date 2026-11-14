@@ -1,18 +1,2 @@
-export const PROFILE = {
-  name: 'Dhruvil Satani',
-  role: 'DevOps & Cloud Platform Engineer',
-  bio: 'I built InfraLoop to show teams what is missing before production. If you want the infrastructure itself built or reviewed, you can hire me directly.',
-  info: [
-    ['Focus', 'Kubernetes, Terraform, CI/CD, observability'],
-    ['Stack', 'Kubernetes | Docker | Helm | Terraform | AWS | Python | GitHub Actions'],
-    ['Education', 'MSc Computer Science'],
-    ['Location', 'Germany'],
-  ] as [string, string][],
-  email: 'dhruvilsatani00@gmail.com',
-  github: 'https://github.com/dhruvilsatani',
-  linkedin: '',
-};
-
-// true = gaps, cost, setup, configure options and generated files come from mock/sample-data.ts.
-// The report body is always the real markdown from the backend.
+// true = gaps and budget come from mock/sample-data.ts. Everything else is real backend data.
 export const USE_MOCK_DATA = true;

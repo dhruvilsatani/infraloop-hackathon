@@ -17,4 +17,7 @@ module.exports = {
   '/scan': apiRoute,
   '/answer': apiRoute,
   '/upload': apiRoute,
+  '/targets': apiRoute,
+  '/preview': apiRoute,
+  '/generate': apiRoute,
 };

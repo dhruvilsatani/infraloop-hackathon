@@ -2,7 +2,6 @@ import { Component, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter, map } from 'rxjs';
-import { ProfileService } from '../../core/profile.service';
 import { WizardService } from '../../core/wizard.service';
 
 @Component({
@@ -13,7 +12,6 @@ import { WizardService } from '../../core/wizard.service';
 export class SiteHeaderComponent {
   private readonly router = inject(Router);
   protected readonly wizard = inject(WizardService);
-  protected readonly profile = inject(ProfileService);
 
   protected readonly onLanding = toSignal(
     this.router.events.pipe(
