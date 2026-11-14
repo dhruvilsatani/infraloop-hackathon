@@ -1,0 +1,80 @@
+<div class="wizard-page container">
+  <app-stepper [current]="1" />
+
+  <div class="split">
+    <section class="split-main">
+      <h1 class="serif page-title">Analyze a repository</h1>
+      <p class="lead">Paste a link to a public repo, or upload a private folder. Takes about a minute.</p>
+
+      <label class="field">
+        <span class="field-label">Repository link</span>
+        <input #repoInput class="input mono-input" type="text" [(ngModel)]="repo" placeholder="https://github.com/your-org/your-repo" autocomplete="off" />
+      </label>
+
+      <div class="divider-text"><span>or upload your project</span></div>
+
+      <div class="drop" [class.over]="dragOver()"
+           (dragenter)="onDragOver($event)" (dragover)="onDragOver($event)"
+           (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+        <svg class="folder-icon" viewBox="0 0 48 48" aria-hidden="true">
+          <path d="M6 14a3 3 0 0 1 3-3h10l4 4h16a3 3 0 0 1 3 3v17a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/>
+        </svg>
+        <p class="drop-title">Drag your project folder here</p>
+        <button type="button" class="btn btn-outline btn-sm" (click)="folderInput.click()">Choose folder&hellip;</button>
+        <input #folderInput type="file" webkitdirectory multiple hidden (change)="onFolderChosen($event)" />
+
+        @if (upload.reading()) {
+          <p class="upload-note">Reading folder&hellip;</p>
+        } @else if (upload.summary(); as s) {
+          <div class="upload-note">
+            <div><span class="ok">&#10003; {{ s.root }}</span> &mdash; {{ s.sent }} files will be read ({{ s.size }})</div>
+            @if (s.skipped.length) {
+              <div class="muted">Skipped: {{ s.skipped.join(', ') }}</div>
+            }
+            @if (s.secrets.length) {
+              <div class="muted">Secret files kept private (content not sent): {{ s.secrets.join(', ') }}</div>
+            }
+            @if (s.tooMany) {
+              <div class="error-box">Folder is very large; only the first {{ maxFiles }} files are used.</div>
+            }
+            <a href="#" class="link" (click)="$event.preventDefault(); clearFolder()">Remove</a>
+          </div>
+        } @else if (upload.notice()) {
+          <p class="upload-note muted">{{ upload.notice() }}</p>
+        }
+      </div>
+      <p class="fine">node_modules and .git are skipped. Secret files (.env, keys) are never sent: only their names are noted.</p>
+
+      <label class="field">
+        <span class="field-label">Tell us more about the project <span class="muted">(optional)</span></span>
+        <textarea class="input" [(ngModel)]="notes" rows="4" placeholder="Small team, about 2,000 users, EU hosting"></textarea>
+      </label>
+
+      <div class="action-row">
+        <button type="button" class="btn btn-primary btn-lg" [disabled]="busy()" (click)="analyze()">Analyze</button>
+        <a href="#" class="link" (click)="$event.preventDefault(); example()">See an example report first</a>
+      </div>
+
+      @if (busy()) {
+        <div class="loading" role="status">
+          <div class="spinner"></div>
+          <div class="muted">{{ status() }}</div>
+        </div>
+      }
+      @if (error()) {
+        <div class="error-box" role="alert">{{ error() }}</div>
+      }
+    </section>
+
+    <aside class="side-card">
+      <h2 class="side-title">What we do with files</h2>
+      <ul class="check-list">
+        <li><span class="check" aria-hidden="true">&#10003;</span> Source code is never sent to an AI model</li>
+        <li><span class="check" aria-hidden="true">&#10003;</span> Secret files are never uploaded: names only</li>
+        <li><span class="check" aria-hidden="true">&#10003;</span> Files are deleted right after the scan</li>
+        <li><span class="check" aria-hidden="true">&#10003;</span> Report only: never touches your cloud</li>
+      </ul>
+      <p class="side-note">If a project has almost no code, a short part of its README may be included.</p>
+    </aside>
+  </div>
+</div>

@@ -1,0 +1,38 @@
+<div class="drawer-overlay" [class.active]="profile.open()" (click)="profile.close()"></div>
+<aside class="profile-drawer" [class.active]="profile.open()" role="dialog" aria-modal="true" aria-labelledby="p-title" [attr.aria-hidden]="!profile.open()">
+  <div class="drawer-head">
+    <h2 id="p-title">About the builder</h2>
+    <button #closeBtn type="button" class="drawer-close" (click)="profile.close()" aria-label="Close">&times;</button>
+  </div>
+  <div>
+    <div class="avatar" aria-hidden="true">{{ initials }}</div>
+    <h3 class="p-name">{{ data.name }}</h3>
+    <p class="p-role">{{ data.role }}</p>
+    <p class="p-bio">{{ data.bio }}</p>
+  </div>
+  <div class="info-list">
+    @for (item of data.info; track item[0]) {
+      <div class="info-item">
+        <div class="info-label">{{ item[0] }}</div>
+        <div class="info-value">{{ item[1] }}</div>
+      </div>
+    }
+    @if (data.email) {
+      <div class="info-item">
+        <div class="info-label">Email</div>
+        <div class="info-value">{{ data.email }}</div>
+      </div>
+    }
+  </div>
+  <div class="contact-links">
+    @if (data.email) {
+      <a class="primary" [href]="'mailto:' + data.email">Email me</a>
+    }
+    @if (data.github) {
+      <a [href]="data.github" target="_blank" rel="noopener noreferrer">GitHub</a>
+    }
+    @if (data.linkedin) {
+      <a [href]="data.linkedin" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+    }
+  </div>
+</aside>

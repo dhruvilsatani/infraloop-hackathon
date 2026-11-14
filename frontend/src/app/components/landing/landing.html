@@ -1,0 +1,105 @@
+<section class="hero container">
+  <div class="hero-copy">
+    <p class="eyebrow">Production-readiness report</p>
+    <h1 class="serif hero-title">Know what is missing before you go to production.</h1>
+    <p class="lead">Point InfraLoop at a repository and get one report: the gaps it found, the setup we recommend, and the monthly cost, calculated in code.</p>
+    <p class="hero-promise">Your source code never goes to an AI.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary btn-lg" routerLink="/scan">Analyze a repository</a>
+      <a class="btn btn-outline btn-lg" href="#" (click)="openExample($event)">See an example report</a>
+    </div>
+  </div>
+
+  <aside class="preview card" aria-label="Example report preview">
+    <div class="preview-head">
+      <strong>Production readiness report</strong>
+      <span class="pill pill-green">Example</span>
+    </div>
+    <div class="preview-section">
+      <p class="mono muted">Gaps found</p>
+      @for (gap of data.gaps; track gap.name) {
+        <div class="preview-row">
+          <span>{{ gap.name }}</span>
+          <span class="bar" aria-hidden="true"></span>
+          <span class="sev sev-{{ gap.severity.toLowerCase() }}">{{ gap.severity }}</span>
+        </div>
+      }
+    </div>
+    <div class="preview-section">
+      <p class="mono muted">Recommended setup</p>
+      <p class="preview-setup">{{ data.setup.name }}</p>
+    </div>
+    <div class="preview-foot">
+      <span class="mono muted">Monthly cost</span>
+      <span class="serif price">€ — / month</span>
+    </div>
+  </aside>
+</section>
+
+<section class="trust container" aria-label="Guarantees">
+  @for (item of trust; track item) {
+    <div class="trust-item"><span class="check" aria-hidden="true">&#10003;</span><span>{{ item }}</span></div>
+  }
+</section>
+
+<section id="how" class="section container">
+  <p class="eyebrow">How it works</p>
+  <h2 class="serif section-title">From repository to report in about a minute.</h2>
+  <div class="steps-grid">
+    <article class="step-card">
+      <p class="mono num">01</p>
+      <h3>Scan</h3>
+      <p>Paste a public repo link or upload a private folder.</p>
+    </article>
+    <article class="step-card">
+      <p class="mono num">02</p>
+      <h3>Answer</h3>
+      <p>Quick questions about scale, budget and constraints.</p>
+    </article>
+    <article class="step-card">
+      <p class="mono num">03</p>
+      <h3>Report</h3>
+      <p>Gaps, a recommended setup and a monthly cost.</p>
+    </article>
+  </div>
+</section>
+
+<section class="privacy">
+  <div class="container">
+    <p class="eyebrow">Privacy by design</p>
+    <h2 class="serif section-title">The AI sees a summary, not your code.</h2>
+    <div class="flow" aria-label="Data flow">
+      <div class="flow-box">{{ flow[0] }}</div>
+      <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+      <div class="flow-box">{{ flow[1] }}</div>
+      <span class="flow-divider" aria-hidden="true"></span>
+      <div class="flow-box flow-box-hl">{{ flow[2] }}</div>
+      <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+      <div class="flow-box">{{ flow[3] }}</div>
+    </div>
+    <div class="flow-notes">
+      <span>Source code and secret files stay on this side</span>
+      <span>Only a short summary crosses</span>
+    </div>
+  </div>
+</section>
+
+<section id="roadmap" class="section container roadmap">
+  <p class="eyebrow eyebrow-amber">Coming next &middot; expected December 2026</p>
+  <h2 class="serif section-title">After the report: an agent that sees outages coming.</h2>
+  <p class="lead">Reads live metrics, events and the dependency graph of your Kubernetes cluster.</p>
+  <button type="button" class="btn btn-outline btn-lg" (click)="profile.show()">Get in touch</button>
+</section>
+
+<footer class="site-footer">
+  <div class="container footer-row">
+    <span>InfraLoop &middot; Report only, never connects to your cloud</span>
+    <span>Built by Dhruvil Satani</span>
+  </div>
+  <div class="container footer-fine">
+    Cost figures are estimates from list prices at the time of the scan. Parts of the report are written by an AI model; check the evidence before you act on a finding.
+    @if (mock) {
+      <span class="mock-note">Gap, cost and setup figures on this site are sample data.</span>
+    }
+  </div>
+</footer>
