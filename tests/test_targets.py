@@ -1,4 +1,5 @@
 """'Where will it run?': options come from the planner, files exist only where a pack exists, and the Hetzner pack stays safe."""
+from pathlib import Path
 import io, os, shutil, subprocess, sys, tempfile, unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -685,6 +686,60 @@ class Api(unittest.TestCase):
         self.assertEqual(api.report_gaps(rep), [{"name": "No CI", "severity": "High", "group": "Recommended",
                                                  "source": "Checked in your repo by the scan", "evidence": ["no workflow file"]}])
         self.assertEqual(api.report_gaps("# nothing here"), [])
+
+
+
+@unittest.skipUnless(HAVE_API, "fastapi is not installed")
+class Pages(unittest.TestCase):
+    """The production image serves the built Angular app from the backend; without a build the classic page stays at /."""
+
+    def setUp(self):
+        self.client = TestClient(api.app)
+        self.tmp = tempfile.TemporaryDirectory()
+        self.old = api.FRONTEND_DIR
+
+    def tearDown(self):
+        api.FRONTEND_DIR = self.old
+        self.tmp.cleanup()
+
+    def build(self):
+        d = Path(self.tmp.name)
+        (d / "index.html").write_text("<html>ANGULAR APP</html>")
+        (d / "main-ABC123.js").write_text("console.log(1)")
+        (d / "assets").mkdir()
+        (d / "assets" / "example-report.md").write_text("# from the angular build")
+        api.FRONTEND_DIR = d
+
+    def test_without_a_build_the_classic_page_is_served_and_unknown_addresses_are_404(self):
+        api.FRONTEND_DIR = Path(self.tmp.name) / "missing"
+        self.assertNotIn("ANGULAR APP", self.client.get("/").text)
+        self.assertEqual(self.client.get("/report").status_code, 404)
+        self.assertEqual(self.client.get("/assets/example-report.md").status_code, 200)
+
+    def test_with_a_build_the_angular_app_answers_its_own_pages(self):
+        self.build()
+        for path in ("/", "/scan", "/answer", "/report", "/configure", "/files"):
+            r = self.client.get(path)
+            self.assertEqual(r.status_code, 200, path)
+            self.assertIn("ANGULAR APP", r.text, path)
+        self.assertEqual(self.client.get("/main-ABC123.js").text, "console.log(1)")
+        self.assertIn("from the angular build", self.client.get("/assets/example-report.md").text)
+        self.assertNotIn("ANGULAR APP", self.client.get("/classic").text)
+
+    def test_a_missing_file_is_404_not_the_app_page_and_nothing_outside_the_folders_is_served(self):
+        self.build()
+        self.assertEqual(self.client.get("/main-OLD.js").status_code, 404)
+        self.assertEqual(self.client.get("/assets/nope.png").status_code, 404)
+        secret = Path(self.tmp.name).parent / "outside-secret.txt"
+        for attempt in ("/..%2F" + secret.name, "/assets/..%2F..%2F" + secret.name, "/%2e%2e/" + secret.name):
+            self.assertNotEqual(self.client.get(attempt).status_code, 200, attempt)
+        self.assertIsNone(api._file_under(Path(self.tmp.name), "../" + secret.name))
+        self.assertIsNone(api._file_under(Path(self.tmp.name), "/etc/passwd"))
+
+    def test_the_api_still_answers_posts_on_the_page_addresses(self):
+        self.build()
+        self.assertEqual(self.client.post("/targets", json={"session_id": "nope-nope-nope"}).status_code, 404)
+        self.assertIn(self.client.post("/scan", json={}).status_code, (400, 422))     # the API answered, not the page
 
 
 if __name__ == "__main__":

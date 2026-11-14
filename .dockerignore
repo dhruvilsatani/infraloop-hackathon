@@ -17,4 +17,8 @@ plain_test.txt
 repos_*.txt
 .env
 .env.*
-frontend
+# the frontend sources are needed by Dockerfile.prod; its heavy and generated folders are not
+frontend/node_modules
+frontend/dist
+frontend/.angular
+web/frontend_dist

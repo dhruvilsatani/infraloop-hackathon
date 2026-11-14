@@ -344,9 +344,45 @@ def preview(req: GenerateRequest):
             "skipped": [{"gap": k.gap, "reason": k.reason} for k in bundle.skipped]}
 
 
-app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")
+# ---------------------------------------------------------------- pages
+# The Angular app (frontend/) is served from here when a production build of it exists: the production image builds it into
+# web/frontend_dist. Without a build (local development) "/" is the classic built-in page and the Angular dev server runs on its own port.
+FRONTEND_DIR = Path(os.environ.get("INFRALOOP_FRONTEND_DIR") or (Path(__file__).parent / "frontend_dist"))
+
+
+def _has_frontend():
+    return (FRONTEND_DIR / "index.html").is_file()
+
+
+def _file_under(base, rel):
+    """The file `rel` inside `base`, or None. Never a path outside `base`."""
+    try:
+        target = (base / rel).resolve()
+        target.relative_to(base.resolve())
+    except (ValueError, OSError):
+        return None
+    return target if target.is_file() else None
+
+
+@app.get("/classic", response_class=HTMLResponse)
+def classic():
+    return (STATIC_DIR / "index.html").read_text()
 
 
 @app.get("/", response_class=HTMLResponse)
 def index():
+    if _has_frontend():
+        return (FRONTEND_DIR / "index.html").read_text()
     return (STATIC_DIR / "index.html").read_text()
+
+
+@app.get("/{path:path}")
+def page_or_file(path: str):
+    """Static files of the Angular build and of the classic page; any other address is a page of the Angular app (it does its own routing)."""
+    from fastapi.responses import FileResponse
+    found = (_file_under(FRONTEND_DIR, path) if _has_frontend() else None) or _file_under(STATIC_DIR, path)
+    if found and found.name != "index.html":
+        return FileResponse(found)
+    if _has_frontend() and not path.startswith("assets/") and "." not in path.rsplit("/", 1)[-1]:
+        return HTMLResponse((FRONTEND_DIR / "index.html").read_text())
+    raise HTTPException(status_code=404, detail="Not found")
