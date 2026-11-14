@@ -4,11 +4,12 @@ import { ReportDataService } from '../../core/report-data.service';
 import { WizardService } from '../../core/wizard.service';
 import { errorMessage } from '../../core/api.service';
 import { Target } from '../../models';
+import { MoreInfoComponent } from '../more-info/more-info';
 import { StepperComponent } from '../stepper/stepper';
 
 @Component({
   selector: 'app-configure-step',
-  imports: [RouterLink, StepperComponent],
+  imports: [RouterLink, StepperComponent, MoreInfoComponent],
   templateUrl: './configure-step.html',
 })
 export class ConfigureStepComponent implements OnInit {

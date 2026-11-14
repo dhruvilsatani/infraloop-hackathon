@@ -7,11 +7,12 @@ import { ReportDataService } from '../../core/report-data.service';
 import { WizardService } from '../../core/wizard.service';
 import { errorMessage } from '../../core/api.service';
 import { AdviceItem, SkippedItem } from '../../models';
+import { MoreInfoComponent } from '../more-info/more-info';
 import { StepperComponent } from '../stepper/stepper';
 
 @Component({
   selector: 'app-report-step',
-  imports: [StepperComponent],
+  imports: [StepperComponent, MoreInfoComponent],
   templateUrl: './report-step.html',
 })
 export class ReportStepComponent implements OnInit {

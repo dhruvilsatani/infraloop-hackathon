@@ -44,6 +44,9 @@ describe('async page loading placeholders', () => {
       selectedTargetId,
       selectedTarget,
       recommendedTarget,
+      gaps: signal([]),
+      budget: signal<number | null>(null),
+      aiWritten: signal(false),
       loadTargets: () =>
         new Promise<void>((resolve) => {
           finishLoad = () => {

@@ -59,6 +59,11 @@
       <p class="muted">No gaps are listed for this repository. The full written report below has the details.</p>
     } @else {
     <table class="gap-table">
+      <colgroup>
+        <col class="gap-col-name" />
+        <col class="gap-col-evidence" />
+        <col class="gap-col-severity" />
+      </colgroup>
       <thead>
         <tr><th>Gap</th><th>Evidence from your files</th><th>Severity</th></tr>
       </thead>
@@ -68,7 +73,7 @@
             <td class="gap-name">{{ gap.name }}</td>
             <td>
               @for (line of gap.evidence; track line) {
-                <div class="muted">{{ line }}</div>
+                <div class="gap-evidence-line">{{ line }}</div>
               }
             </td>
             <td><span [class]="severityClass(gap.severity)">{{ gap.severity }}</span></td>
@@ -94,35 +99,34 @@
         <p class="setup-name">{{ rec.label }}</p>
         <p class="muted">{{ rec.note }}</p>
       </div>
-    @if (data.recommended(); as rec) {
-      <p class="setup-name">{{ rec.label }}</p>
-      <p class="muted">{{ rec.note }}</p>
-      @if (rec.why.length) {
-        <p class="mono muted">Why this one</p>
-        <ul class="plain-list">
-          @for (w of rec.why; track w) { <li>{{ w }}</li> }
-        </ul>
-      }
-      @if (rec.benefits.length) {
-        <p class="mono muted">What it gives you</p>
-        <ul class="plain-list">
-          @for (b of rec.benefits; track b) { <li>{{ b }}</li> }
-        </ul>
-      }
-      @if (rec.drawbacks.length) {
-        <p class="mono muted">What you give up</p>
-        <ul class="plain-list">
-          @for (d of rec.drawbacks; track d) { <li>{{ d }}</li> }
-        </ul>
-      }
-      @if (data.alternatives().length) {
-        <p class="mono muted">Alternatives you did not pick</p>
-        <ul class="alt-list">
-          @for (alt of data.alternatives(); track alt.id) {
-            <li>{{ alt.short }}: <span class="mono">€ {{ alt.monthly_eur }}/mo</span></li>
-          }
-        </ul>
-      }
+      <app-more-info title="Recommendation details">
+        @if (rec.why.length) {
+          <p class="mono muted">Why this one</p>
+          <ul class="plain-list">
+            @for (w of rec.why; track w) { <li>{{ w }}</li> }
+          </ul>
+        }
+        @if (rec.benefits.length) {
+          <p class="mono muted">What it gives you</p>
+          <ul class="plain-list">
+            @for (b of rec.benefits; track b) { <li>{{ b }}</li> }
+          </ul>
+        }
+        @if (rec.drawbacks.length) {
+          <p class="mono muted">What you give up</p>
+          <ul class="plain-list">
+            @for (d of rec.drawbacks; track d) { <li>{{ d }}</li> }
+          </ul>
+        }
+        @if (data.alternatives().length) {
+          <p class="mono muted">Alternatives you did not pick</p>
+          <ul class="alt-list">
+            @for (alt of data.alternatives(); track alt.id) {
+              <li>{{ alt.short }}: <span class="mono">€ {{ alt.monthly_eur }}/mo</span></li>
+            }
+          </ul>
+        }
+      </app-more-info>
     } @else if (!loadError()) {
       <p class="muted">Loading your setup&hellip;</p>
     }
@@ -145,17 +149,6 @@
       @if (rec.price_note) {
         <p class="muted small">{{ rec.price_note }}</p>
       }
-    }
-    @if (!loadingData()) {
-      <p class="budget-line">
-        <span class="sample-tag">sample budget</span>
-        Your budget is € {{ data.budget }} per month.
-        @if (data.isWithinBudget(data.recommended()?.monthly_eur)) {
-          <span class="ok">Within it.</span>
-        } @else if (data.recommended()?.monthly_eur != null) {
-          <span class="over">Over it.</span>
-        }
-      </p>
     }
     @if (!wizard.isExample()) {
       <p class="budget-line">

@@ -8,18 +8,44 @@
     <div class="card form-card">
       @for (q of wizard.questions(); track q.id) {
         <div class="q" [class.hidden]="!isVisible(q)">
-          <label class="field">
-            <span class="field-label">{{ q.question }}@if (q.optional) { <span class="muted"> (optional)</span> }</span>
+          <div class="field">
+            <label class="field-label" [attr.for]="q.kind === 'text' ? 'answer-' + q.id : null">
+              {{ questionTitle(q) }}
+              @if (q.optional) {
+                <span class="field-optional">Optional</span>
+              } @else {
+                <span class="required-mark" aria-hidden="true">*</span><span class="sr-only"> Required</span>
+              }
+            </label>
+            @if (hasLongDetails(q)) {
+              <p class="field-help">Share the database type, hosting preference, expected size, recovery needs, and whether replicas are required.</p>
+              <app-more-info title="Database question details">
+                <p class="question-details">{{ q.question }}</p>
+              </app-more-info>
+            }
             @if (q.kind === 'choice') {
-              <span class="choices">
+              <span class="choices horizontal-chip-list" role="group" tabindex="0" [attr.aria-label]="q.question">
                 @for (o of q.options ?? []; track o) {
                   <button type="button" class="choice" [class.selected]="answer(q) === o" (click)="wizard.setAnswer(q.question, o)">{{ o }}</button>
                 }
               </span>
             } @else {
-              <input class="input" type="text" [value]="answer(q)" (input)="onText(q, $event)" />
+              @if (presetsFor(q).length) {
+                <div class="suggestion-block">
+                  <span class="suggestion-label">Quick answers</span>
+                  <div class="suggestion-group horizontal-chip-list" role="group" tabindex="0" [attr.aria-label]="'Suggested answers for ' + q.id">
+                    @for (preset of presetsFor(q); track preset.label) {
+                      <button type="button" class="suggestion-chip"
+                              [class.selected]="answer(q) === preset.value"
+                              [attr.aria-pressed]="answer(q) === preset.value"
+                              (click)="choosePreset(q, preset)">{{ preset.label }}</button>
+                    }
+                  </div>
+                </div>
+              }
+              <input class="input" type="text" [id]="'answer-' + q.id" [attr.aria-required]="q.optional ? null : 'true'" [value]="answer(q)" (input)="onText(q, $event)" />
             }
-          </label>
+          </div>
         </div>
       }
 
