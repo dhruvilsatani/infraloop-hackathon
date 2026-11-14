@@ -6,7 +6,8 @@ export interface QuestionDependency {
 export interface Question {
   id: string;
   question: string;
-  kind: 'text' | 'choice';
+  // Some rule-built backend questions omit kind; normalizeQuestion defaults those to text.
+  kind?: 'text' | 'choice';
   options?: string[];
   depends_on?: QuestionDependency;
   optional?: boolean;
@@ -119,5 +120,5 @@ export interface PreviewResponse {
 }
 
 export function normalizeQuestion(q: Question | string): Question {
-  return typeof q === 'string' ? { id: q, question: q, kind: 'text' } : q;
+  return typeof q === 'string' ? { id: q, question: q, kind: 'text' } : { ...q, kind: q.kind ?? 'text' };
 }

@@ -2,13 +2,15 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ApiService, errorMessage } from '../../core/api.service';
+import { QuestionPreset, questionPresets } from '../../core/question-presets';
 import { WizardService } from '../../core/wizard.service';
 import { normalizeQuestion, Question } from '../../models';
+import { MoreInfoComponent } from '../more-info/more-info';
 import { StepperComponent } from '../stepper/stepper';
 
 @Component({
   selector: 'app-questions-step',
-  imports: [FormsModule, StepperComponent],
+  imports: [FormsModule, StepperComponent, MoreInfoComponent],
   templateUrl: './questions-step.html',
 })
 export class QuestionsStepComponent {
@@ -26,6 +28,22 @@ export class QuestionsStepComponent {
 
   protected answer(q: Question): string {
     return this.wizard.answers()[q.question] ?? '';
+  }
+
+  protected presetsFor(q: Question): readonly QuestionPreset[] {
+    return q.kind !== 'choice' ? questionPresets(q.id) : [];
+  }
+
+  protected choosePreset(q: Question, preset: QuestionPreset): void {
+    this.wizard.setAnswer(q.question, preset.value);
+  }
+
+  protected questionTitle(q: Question): string {
+    return q.id === 'database' ? 'Tell us about your production database' : q.question;
+  }
+
+  protected hasLongDetails(q: Question): boolean {
+    return q.id === 'database';
   }
 
   protected onText(q: Question, e: Event): void {

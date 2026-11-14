@@ -60,36 +60,43 @@
         <aside class="selection card">
           <p class="mono muted">Your choice</p>
           <h2 class="selection-title">{{ sel.short }}</h2>
-          <p class="muted small">{{ sel.note }}</p>
-          @if (sel.catch) {
-            <p class="small"><span class="mono muted">The catch:</span> {{ sel.catch }}</p>
-          }
 
           <div class="selection-cost">
             <p class="mono muted">Estimated cost</p>
             @if (sel.monthly_eur !== null) {
               <p class="summary-value">€ {{ sel.monthly_eur }} <span class="per-month">/ month</span></p>
-              @if (sel.price_note) {
-                <p class="muted small">{{ sel.price_note }}</p>
-              }
             } @else {
               <p class="muted">Not priced in the report.</p>
             }
           </div>
 
-          @if (sel.drawbacks.length) {
-            <p class="mono muted selection-sub">What you give up</p>
-            <ul class="plain-list small">
-              @for (d of sel.drawbacks; track d) { <li>{{ d }}</li> }
-            </ul>
-          }
-
-          @if (sel.links.length) {
-            <p class="mono muted selection-sub">Read more</p>
-            <ul class="plain-list small">
-              @for (l of sel.links; track l.url) { <li><a [href]="l.url" target="_blank" rel="noopener noreferrer">{{ l.label }}</a></li> }
-            </ul>
-          }
+          <app-more-info title="Selected platform details">
+            <p class="muted small">{{ sel.note }}</p>
+            @if (sel.catch) {
+              <p class="small"><span class="mono muted">The catch:</span> {{ sel.catch }}</p>
+            }
+            @if (sel.price_note) {
+              <p class="muted small">{{ sel.price_note }}</p>
+            }
+            @if (sel.benefits.length) {
+              <p class="mono muted selection-sub">What you get</p>
+              <ul class="plain-list small">
+                @for (b of sel.benefits; track b) { <li>{{ b }}</li> }
+              </ul>
+            }
+            @if (sel.drawbacks.length) {
+              <p class="mono muted selection-sub">What you give up</p>
+              <ul class="plain-list small">
+                @for (d of sel.drawbacks; track d) { <li>{{ d }}</li> }
+              </ul>
+            }
+            @if (sel.links.length) {
+              <p class="mono muted selection-sub">Read more</p>
+              <ul class="plain-list small">
+                @for (l of sel.links; track l.url) { <li><a [href]="l.url" target="_blank" rel="noopener noreferrer">{{ l.label }}</a></li> }
+              </ul>
+            }
+          </app-more-info>
 
           @if (data.budget() !== null && sel.monthly_eur !== null) {
             <p class="budget-line small">
