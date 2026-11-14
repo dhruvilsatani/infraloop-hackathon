@@ -7,7 +7,23 @@
   @if (loadError()) {
     <div class="error-box" role="alert">{{ loadError() }}</div>
   } @else if (loading()) {
-    <div class="loading" role="status"><div class="spinner"></div><div class="muted">Preparing your files&hellip;</div></div>
+    <div class="files-layout files-skeleton" role="status">
+      <span class="sr-only">Preparing your files</span>
+      <aside class="file-tree" aria-hidden="true">
+        <div class="tree-head"><div class="skeleton skeleton-line skeleton-tree-count"></div></div>
+        @for (n of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; track n) {
+          <div class="skeleton-tree-row"><div class="skeleton skeleton-circle"></div><div class="skeleton skeleton-line"></div></div>
+        }
+      </aside>
+      <section class="editor" aria-hidden="true">
+        <div class="editor-tabs"><div class="skeleton skeleton-tab"></div></div>
+        <div class="skeleton-code">
+          @for (n of [1, 2, 3, 4, 5, 6, 7, 8]; track n) {
+            <div class="skeleton skeleton-line" [class.skeleton-line-short]="n % 3 === 0"></div>
+          }
+        </div>
+      </section>
+    </div>
   } @else {
     <div class="files-layout">
       <aside class="file-tree" aria-label="Files">

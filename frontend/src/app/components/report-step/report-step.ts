@@ -23,6 +23,7 @@ export class ReportStepComponent implements OnInit {
   protected readonly advice = signal<AdviceItem[]>([]);
   protected readonly skipped = signal<SkippedItem[]>([]);
   protected readonly loadError = signal('');
+  protected readonly loadingData = signal(true);
 
   protected readonly html = computed<SafeHtml>(() => {
     const md = this.wizard.reportMarkdown();
@@ -32,7 +33,10 @@ export class ReportStepComponent implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
-    if (this.wizard.isExample()) return;
+    if (this.wizard.isExample()) {
+      this.loadingData.set(false);
+      return;
+    }
     try {
       await this.wizard.loadTargets();
       const basic = await this.wizard.loadPreview('');
@@ -40,6 +44,8 @@ export class ReportStepComponent implements OnInit {
       this.skipped.set(basic.skipped);
     } catch (e) {
       this.loadError.set(errorMessage(e, 'Could not load the results of this scan.'));
+    } finally {
+      this.loadingData.set(false);
     }
   }
 

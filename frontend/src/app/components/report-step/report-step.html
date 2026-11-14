@@ -29,17 +29,25 @@
     </div>
     <div>
       <p class="mono muted">Recommended setup</p>
-      <p class="summary-text">{{ data.recommended()?.short ?? '—' }}</p>
+      @if (loadingData()) {
+        <div class="skeleton skeleton-line skeleton-summary" aria-hidden="true"></div>
+      } @else {
+        <p class="summary-text async-content">{{ data.recommended()?.short ?? '—' }}</p>
+      }
     </div>
     <div>
       <p class="mono muted">Monthly cost</p>
-      <p class="summary-value">
-        @if (data.recommended()?.monthly_eur != null) {
-          € {{ data.recommended()!.monthly_eur }} <span class="per-month">per month</span>
-        } @else {
-          —
-        }
-      </p>
+      @if (loadingData()) {
+        <div class="skeleton skeleton-line skeleton-cost" aria-hidden="true"></div>
+      } @else {
+        <p class="summary-value async-content">
+          @if (data.recommended()?.monthly_eur != null) {
+            € {{ data.recommended()!.monthly_eur }} <span class="per-month">per month</span>
+          } @else {
+            —
+          }
+        </p>
+      }
     </div>
   </div>
 
@@ -70,9 +78,17 @@
   <section class="report-section">
     <p class="eyebrow">02 &middot; Setup</p>
     <h2 class="section-title-sm">Recommended setup</h2>
-    @if (data.recommended(); as rec) {
-      <p class="setup-name">{{ rec.label }}</p>
-      <p class="muted">{{ rec.note }}</p>
+    @if (loadingData()) {
+      <div class="skeleton-stack" aria-hidden="true">
+        <div class="skeleton skeleton-line skeleton-setup-title"></div>
+        <div class="skeleton skeleton-line"></div>
+        <div class="skeleton skeleton-line skeleton-line-short"></div>
+      </div>
+    } @else if (data.recommended(); as rec) {
+      <div class="async-content">
+        <p class="setup-name">{{ rec.label }}</p>
+        <p class="muted">{{ rec.note }}</p>
+      </div>
       @if (rec.benefits.length) {
         <p class="mono muted">What it gives you</p>
         <ul class="plain-list">
@@ -101,7 +117,12 @@
   <section class="report-section">
     <p class="eyebrow">03 &middot; Cost</p>
     <h2 class="section-title-sm">Monthly cost</h2>
-    @if (data.recommended(); as rec) {
+    @if (loadingData()) {
+      <div class="skeleton-stack" aria-hidden="true">
+        <div class="skeleton skeleton-line skeleton-cost"></div>
+        <div class="skeleton skeleton-line"></div>
+      </div>
+    } @else if (data.recommended(); as rec) {
       @if (rec.monthly_eur !== null) {
         <p class="summary-value">€ {{ rec.monthly_eur }} <span class="per-month">per month, excl. VAT</span></p>
       } @else {
@@ -111,37 +132,55 @@
         <p class="muted small">{{ rec.price_note }}</p>
       }
     }
-    <p class="budget-line">
-      <span class="sample-tag">sample budget</span>
-      Your budget is € {{ data.budget }} per month.
-      @if (data.isWithinBudget(data.recommended()?.monthly_eur)) {
-        <span class="ok">Within it.</span>
-      } @else if (data.recommended()?.monthly_eur != null) {
-        <span class="over">Over it.</span>
-      }
-    </p>
+    @if (!loadingData()) {
+      <p class="budget-line">
+        <span class="sample-tag">sample budget</span>
+        Your budget is € {{ data.budget }} per month.
+        @if (data.isWithinBudget(data.recommended()?.monthly_eur)) {
+          <span class="ok">Within it.</span>
+        } @else if (data.recommended()?.monthly_eur != null) {
+          <span class="over">Over it.</span>
+        }
+      </p>
+    }
   </section>
 
   <section class="report-section">
     <p class="eyebrow">04 &middot; Fixes</p>
     <h2 class="section-title-sm">Fixes to apply by hand</h2>
-    @if (advice().length) {
-      <ul class="plain-list">
-        @for (a of advice(); track a.gap) { <li>{{ a.title }}</li> }
-      </ul>
-      <p class="muted small">InfraLoop does not change your existing files. The steps for each fix are in MANIFEST.md on the Files page.</p>
+    @if (loadingData()) {
+      <div class="skeleton-stack" aria-hidden="true">
+        <div class="skeleton skeleton-line"></div>
+        <div class="skeleton skeleton-line skeleton-line-short"></div>
+      </div>
+    } @else if (advice().length) {
+      <div class="async-content">
+        <ul class="plain-list">
+          @for (a of advice(); track a.gap) { <li>{{ a.title }}</li> }
+        </ul>
+        <p class="muted small">InfraLoop does not change your existing files. The steps for each fix are in MANIFEST.md on the Files page.</p>
+      </div>
     } @else {
       <p class="muted">No fixes needed for files your repository already has.</p>
     }
   </section>
 
-  @if (skipped().length) {
+  @if (loadingData() || skipped().length) {
     <section class="report-section">
       <p class="eyebrow">05 &middot; Not covered</p>
       <h2 class="section-title-sm">Gaps without generated files</h2>
-      <ul class="plain-list">
-        @for (s of skipped(); track s.gap) { <li><span class="mono">{{ s.gap }}</span>: {{ s.reason }}</li> }
-      </ul>
+      @if (loadingData()) {
+        <div class="skeleton-stack" aria-hidden="true">
+          <div class="skeleton skeleton-line"></div>
+          <div class="skeleton skeleton-line skeleton-line-short"></div>
+        </div>
+      } @else {
+        <div class="async-content">
+          <ul class="plain-list">
+            @for (s of skipped(); track s.gap) { <li><span class="mono">{{ s.gap }}</span>: {{ s.reason }}</li> }
+          </ul>
+        </div>
+      }
     </section>
   }
 
