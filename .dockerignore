@@ -17,3 +17,4 @@ plain_test.txt
 repos_*.txt
 .env
 .env.*
+frontend

@@ -1,0 +1,49 @@
+<div class="card">
+  <h2>Analyze a repository</h2>
+  <p class="hint">Public repo: paste the link. Private repo: upload the folder instead (secret files are never sent). Takes about a minute.</p>
+  <label><span>Repository link</span>
+    <input #repoInput type="text" [(ngModel)]="repo" placeholder="https://github.com/owner/repo" autocomplete="off" />
+  </label>
+  <div class="or">or upload your project</div>
+  <div class="drop" [class.over]="dragOver()"
+       (dragenter)="onDragOver($event)" (dragover)="onDragOver($event)"
+       (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+    Drag your project folder here
+    <div><button type="button" class="secondary" (click)="folderInput.click()">Choose folder&hellip;</button></div>
+    <input #folderInput type="file" webkitdirectory multiple hidden (change)="onFolderChosen($event)" />
+    @if (upload.reading()) {
+      <div class="upload-summary"><span class="dim">Reading folder&hellip;</span></div>
+    } @else if (upload.summary(); as s) {
+      <div class="upload-summary">
+        <div><span class="ok">&#10003; {{ s.root }}</span> &mdash; {{ s.sent }} files will be read ({{ s.size }})</div>
+        @if (s.skipped.length) {
+          <div class="dim">Skipped: {{ s.skipped.join(', ') }}</div>
+        }
+        @if (s.secrets.length) {
+          <div class="dim">Secret files kept private (content not sent): {{ s.secrets.join(', ') }}</div>
+        }
+        @if (s.tooMany) {
+          <div class="error-box">Folder is very large; only the first {{ maxFiles }} files are used.</div>
+        }
+        <div><a href="#" (click)="$event.preventDefault(); clearFolder()" style="color:var(--accent-1)">Remove</a></div>
+      </div>
+    } @else if (upload.notice()) {
+      <div class="upload-summary"><span class="dim">{{ upload.notice() }}</span></div>
+    }
+    <div class="privacy-note">Folders like node_modules and .git are skipped. Secret files (.env, keys) are never sent: only their names are noted. Your files are used for this scan only and deleted right after.</div>
+  </div>
+  <label><span>Tell us more about the project <em class="optional-tag">(optional)</em></span>
+    <textarea [(ngModel)]="notes" placeholder="For example: what it does, who uses it, expected users, how big the database gets, compliance needs. Do not paste passwords or keys."></textarea>
+  </label>
+  <button type="button" [disabled]="busy()" (click)="analyze()">Analyze</button>
+  <button type="button" class="secondary" (click)="example()">See an example report first</button>
+  @if (busy()) {
+    <div class="loading" role="status">
+      <div class="spinner"></div>
+      <div class="loading-status">{{ status() }}</div>
+    </div>
+  }
+  @if (error()) {
+    <div class="error-box" role="alert">{{ error() }}</div>
+  }
+</div>

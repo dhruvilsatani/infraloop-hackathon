@@ -1,0 +1,17 @@
+<div class="card wide">
+  <h2>Production readiness report</h2>
+  @if (wizard.isExample()) {
+    <div class="example-banner">Example report. InfraLoop produced this for a real public project (Google&rsquo;s Online Boutique demo: 12 services, Kubernetes, Terraform), with the answers shown in the report. Nothing here is made up for the demo.</div>
+  }
+  <div class="report-body" [innerHTML]="html()"></div>
+  @if (!showcase) {
+    <button type="button" class="secondary" (click)="back()">{{ wizard.isExample() ? '← Back' : '← Back to questions' }}</button>
+  }
+  <button type="button" class="secondary" (click)="downloadMd()">Download .md</button>
+  <button type="button" class="secondary" (click)="downloadJson()">Download .json</button>
+  @if (!showcase) {
+    <button type="button" (click)="newScan()">New scan</button>
+  } @else {
+    <button type="button" class="secondary" (click)="profile.show()">Want this for your repo? Get in touch</button>
+  }
+</div>
