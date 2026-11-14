@@ -1,15 +1,18 @@
 import { Injectable, computed, inject } from '@angular/core';
-import { BUDGET_MONTHLY, GAPS, GapItem } from '../mock/sample-data';
-import { Target } from '../models';
+import { USE_MOCK_DATA } from '../config';
+import { BUDGET_MONTHLY, GAPS } from '../mock/sample-data';
+import { GapItem, Target } from '../models';
 import { WizardService } from './wizard.service';
 
-// Maps backend results to what the pages show. The gap table and the budget are still sample data (see mock/sample-data.ts).
+// Maps backend results to what the pages show. With USE_MOCK_DATA the gap list and the budget are sample data instead.
 @Injectable({ providedIn: 'root' })
 export class ReportDataService {
   private readonly wizard = inject(WizardService);
 
-  readonly gaps: GapItem[] = GAPS;
-  readonly budget = BUDGET_MONTHLY;
+  readonly mock = USE_MOCK_DATA;
+  readonly gaps = computed<GapItem[]>(() => (USE_MOCK_DATA ? GAPS : this.wizard.gaps()));
+  // null = the user gave no usable budget, so there is nothing to compare with.
+  readonly budget = computed<number | null>(() => (USE_MOCK_DATA ? BUDGET_MONTHLY : this.wizard.budget()));
   readonly recommended = this.wizard.recommendedTarget;
   readonly selected = this.wizard.selectedTarget;
   readonly targets = this.wizard.targets;
@@ -20,6 +23,7 @@ export class ReportDataService {
   );
 
   isWithinBudget(cost: number | null | undefined): boolean {
-    return cost !== null && cost !== undefined && cost <= this.budget;
+    const budget = this.budget();
+    return budget !== null && cost !== null && cost !== undefined && cost <= budget;
   }
 }

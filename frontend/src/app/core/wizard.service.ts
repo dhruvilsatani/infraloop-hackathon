@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ApiService } from './api.service';
-import { PreviewResponse, Question, Target } from '../models';
+import { Budget, GapItem, PreviewResponse, Question, Target } from '../models';
 
 // Holds the data that flows through the pages. The current page is the router URL, not a state here.
 @Injectable({ providedIn: 'root' })
@@ -14,6 +14,11 @@ export class WizardService {
   readonly answers = signal<Record<string, string>>({});
   readonly reportMarkdown = signal('');
   readonly isExample = signal(false);
+
+  // From POST /answer, next to the report text.
+  readonly gaps = signal<GapItem[]>([]);
+  readonly budget = signal<number | null>(null);
+  readonly aiWritten = signal(false);
 
   // Real data from the backend, loaded by the pages that need it.
   readonly targets = signal<Target[]>([]);
@@ -39,9 +44,21 @@ export class WizardService {
     this.answers.update((a) => ({ ...a, [question]: value }));
   }
 
-  showReport(markdown: string): void {
+  // A new report means new answers: the setup options and the files depend on them, so the cached ones are dropped.
+  showReport(markdown: string, extra: { gaps?: GapItem[]; budget?: Budget; ai_written?: boolean } = {}): void {
     this.reportMarkdown.set(markdown);
     this.isExample.set(false);
+    this.gaps.set(extra.gaps ?? []);
+    this.budget.set(extra.budget?.monthly_eur ?? null);
+    this.aiWritten.set(extra.ai_written ?? false);
+    this.clearSetup();
+  }
+
+  private clearSetup(): void {
+    this.targets.set([]);
+    this.selectedTargetId.set('');
+    this.preview.set(null);
+    this.previews.clear();
   }
 
   async loadTargets(): Promise<void> {
@@ -75,6 +92,10 @@ export class WizardService {
     const text = await this.api.example();
     this.reportMarkdown.set(text);
     this.isExample.set(true);
+    this.gaps.set([]);
+    this.budget.set(null);
+    this.aiWritten.set(true);
+    this.clearSetup();
     await this.router.navigate(['/report']);
   }
 
@@ -84,10 +105,10 @@ export class WizardService {
     this.answers.set({});
     this.reportMarkdown.set('');
     this.isExample.set(false);
-    this.targets.set([]);
-    this.selectedTargetId.set('');
-    this.preview.set(null);
-    this.previews.clear();
+    this.gaps.set([]);
+    this.budget.set(null);
+    this.aiWritten.set(false);
+    this.clearSetup();
     this.router.navigate(['/scan']);
   }
 }

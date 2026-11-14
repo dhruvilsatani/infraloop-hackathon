@@ -10,6 +10,13 @@ services:
     env_file:
       - path: .env
         required: false
+    environment:
+      # Inside the container "localhost" is the container itself, so a model gateway running on your computer
+      # (OmniRoute, Ollama, ...) is reached through host.docker.internal. Set LLM_BASE_URL in .env to use another address.
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:20128/v1}
+    extra_hosts:
+      # makes host.docker.internal work on Linux too (Docker Desktop on macOS and Windows already has it)
+      - "host.docker.internal:host-gateway"
 
   frontend:
     build: ./frontend
