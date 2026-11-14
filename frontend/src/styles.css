@@ -218,7 +218,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .site-header { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); }
 .nav { display: flex; align-items: center; gap: var(--space-5); min-height: 72px; }
 .brand { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--ink); font-size: var(--text-md); font-weight: 700; text-decoration: none; }
-.brand svg { color: var(--green); }
+.brand-logo { display: block; width: 180px; height: 30px; object-fit: contain; object-position: left center; }
 .nav-links { display: flex; align-items: center; gap: var(--space-5); margin-left: auto; font-size: var(--text-sm); }
 .nav-links a, .link-btn { display: inline-flex; align-items: center; min-height: 40px; color: var(--ink); text-decoration: none; }
 .nav-links a:hover, .link-btn:hover { color: var(--green); }
@@ -511,7 +511,7 @@ textarea.input { min-height: 112px; resize: vertical; }
   :root { --gutter: var(--space-3); }
   .page-title { font-size: var(--text-xl); }
   .hero-title { font-size: 1.85rem; }
-  .brand { font-size: var(--text-base); }
+  .brand-logo { width: 150px; height: 25px; }
   .nav > .btn { padding-inline: var(--space-3); }
   .nav-links { gap: var(--space-2) var(--space-4); }
   .trust-item { font-size: var(--text-sm); }
