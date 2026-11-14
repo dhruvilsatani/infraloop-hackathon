@@ -69,6 +69,21 @@ def wants_hosting(answers):
     return bool(said) and not said.startswith("no")
 
 
+def addons_for(meta, option):
+    """The managed database / secrets / Redis prices for the platform of this option (see cost_estimator._addons). Older data without them falls back to
+    the Google Cloud values, which are what the flat meta keys always held."""
+    ad = (meta.get("addons") or {}).get(option.get("platform"))
+    if ad:
+        return ad
+    return {"db": meta["sql"], "db_ha": meta["sql_dedicated_ha"], "secrets": meta["secret_manager"],
+            "db_note": "Cloud SQL single small shared-core instance + Secret Manager",
+            "db_ha_note": "Cloud SQL high availability, dedicated 1 vCPU / 3.75 GiB, two zones (Iowa price; EU price not read) + Secret Manager",
+            "unknown_line": f"A single small Cloud SQL instance would add {meta['sql']:.2f} EUR/month and a two-zone high-availability one {meta['sql_ha']:.2f} EUR/month (PostgreSQL rate).",
+            "redis_ha": meta.get("redis_standard"),
+            "redis_ha_note": "managed Redis Standard with failover instead of the in-cluster Redis (Memorystore Iowa price; EU price not read)",
+            "redis_single": meta.get("redis_single_autopilot", 0.0)}
+
+
 def _within(total, budget):
     return budget is None or total <= budget + 0.005
 
@@ -88,21 +103,17 @@ def choose_plan(scan_result, answers, cost_data):
     data_loss_none = _answer(answers, "how much recent data").lower().startswith("none")
     demo, overlap = set(meta.get("demo") or []), set(meta.get("overlap") or [])
 
-    extra = 0.0
-    extra_parts = []
-    if db_mode == "managed":
-        extra_parts.append("db")
-
     def priced(o):
-        """Total with the pieces that depend on the answers (database, managed Redis for state)."""
+        """Total with the pieces that depend on the answers (database, managed Redis for state), each priced on the option's own platform."""
         t, notes = o["total"], []
+        ad = addons_for(meta, o)
         if db_mode == "managed":
             ha = uptime == "zero" or data_loss_none
-            t += (meta["sql_dedicated_ha"] if ha else meta["sql"]) + meta["secret_manager"]
-            notes.append("Cloud SQL " + ("high availability, dedicated 1 vCPU / 3.75 GiB, two zones (Iowa price; EU price not read)" if ha else "single small shared-core instance") + " + Secret Manager")
-        if meta.get("redis_standard") and (uptime == "zero" or data_loss_none) and o["stateful_kept_single"]:
-            t += meta["redis_standard"] - meta["redis_single_autopilot"]
-            notes.append("managed Redis Standard with failover instead of the in-cluster Redis (Memorystore Iowa price; EU price not read)")
+            t += (ad["db_ha"] if ha else ad["db"]) + ad["secrets"]
+            notes.append(ad["db_ha_note"] if ha else ad["db_note"])
+        if ad.get("redis_ha") and (uptime == "zero" or data_loss_none) and o["stateful_kept_single"]:
+            t += ad["redis_ha"] - ad["redis_single"]
+            notes.append(ad["redis_ha_note"])
         return round(t, 2), notes
 
     def ok_scope(o, allow_overlap_drop):
@@ -161,11 +172,19 @@ def choose_plan(scan_result, answers, cost_data):
         if uptime == "zero" and not cand["pod_ha"]:
             continue
         t, n = priced(cand)
-        alts.append({"label": cand["label"], "total": t, "zone_ha": cand["zone_ha"], "notes": n})
+        alts.append({"label": cand["label"], "total": t, "zone_ha": cand["zone_ha"], "notes": n, "platform": cand["platform"]})
     alts.sort(key=lambda a: a["total"])
+    # Show the cheapest setup of each platform first, so Google, AWS and Azure can all be compared; then fill up with the next cheapest ones.
+    first, seen = [], set()
+    for a in alts:
+        if a["platform"] not in seen:
+            first.append(a)
+            seen.add(a["platform"])
+    alts = sorted(first[:4] + [a for a in alts if a not in first][:max(0, 4 - len(first))], key=lambda a: a["total"])
     without_state = None
-    if any("Redis" in n for n in notes) and meta.get("redis_standard"):
-        without_state = round(total - (meta["redis_standard"] - meta["redis_single_autopilot"]), 2)
+    _ad = addons_for(meta, o)
+    if any("Redis" in n for n in notes) and _ad.get("redis_ha"):
+        without_state = round(total - (_ad["redis_ha"] - _ad["redis_single"]), 2)
     small_server = small_server_option(scan_result, answers, budget, uptime) if not scan_result.get("repo_kind") == "library_or_tool" else None
     return {"status": status, "chosen": o, "total": total, "small_server": small_server, "without_managed_state": without_state, "notes": notes, "budget": budget, "uptime": uptime, "db_mode": db_mode,
             "alternatives": alts[:4], "cheapest_full": ({"label": cheapest_full[0]["label"], "total": cheapest_full[1]} if cheapest_full else None),
@@ -212,10 +231,11 @@ def describe(plan):
     elif uptime in ("minutes", "hours", "unknown"):
         L.append("Availability: one copy of each service. A restart, node upgrade or deployment can cause a short outage; this matches what you said you can accept"
                  if uptime != "unknown" else "Availability: one copy of each service (you did not say how much downtime is acceptable, so this is an assumption).")
+    L.extend(_platform_lines(o))
     if plan["db_mode"] == "external":
         L.append("Database: you said you run it yourself or elsewhere, so NO database price is in this total. A database you run yourself must have its own backups, replication and tested restores.")
     elif plan["db_mode"] == "unknown":
-        L.append(f"Database: no usable answer, so no database is in this total. A single small Cloud SQL instance would add {plan['meta']['sql']:.2f} EUR/month and a two-zone high-availability one {plan['meta']['sql_ha']:.2f} EUR/month (PostgreSQL rate).")
+        L.append("Database: no usable answer, so no database is in this total. " + addons_for(plan["meta"], o)["unknown_line"])
     if o["stateful_kept_single"] and not any("Redis" in n for n in plan["notes"]):
         L.append("In-cluster datastore(s) " + ", ".join(o["stateful_kept_single"]) + " stay at ONE copy in these totals (a second copy would be a separate database, not a replica). "
                  "They need a persistent volume, and they are a single point of failure.")
@@ -238,6 +258,24 @@ def describe(plan):
     if plan["demo"]:
         L.append("Left out on purpose (demo/test tooling, not part of production): " + ", ".join(plan["demo"]) + ".")
     return L
+
+
+def _platform_lines(o):
+    """What is and is not inside the price of an AWS or Azure setup, and how to place it for availability. Words only."""
+    plat = o.get("platform")
+    if plat == "aws_fargate":
+        out = ["Priced on AWS: ECS Fargate tasks in public subnets (each task has its own public IPv4 address, which AWS charges for) behind one Application Load Balancer "
+               "(its fixed hourly fee and its two public addresses). Not included: the load balancer's charge for traffic, a NAT gateway, traffic out of AWS and storage for in-cluster datastores."]
+        if o.get("zone_ha"):
+            out.append("To get the availability described above on AWS, run the tasks in subnets of at least two availability zones so the load balancer can spread traffic over them.")
+        return out
+    if plat == "azure_container_apps":
+        out = ["Priced on Azure: Container Apps (Consumption plan) at the full active rate for the whole month, with its built-in HTTPS entry point and no separate load balancer. "
+               "Azure charges a lower rate while a replica is idle and gives a monthly free grant, so the real compute bill can be lower. Not included: request charges beyond the free grant and traffic out of Azure."]
+        if o.get("zone_ha"):
+            out.append("To get the availability described above on Azure, create the Container Apps environment with zone redundancy turned on, so the replicas are spread over zones.")
+        return out
+    return []
 
 
 def facts_lines(plan):
@@ -270,17 +308,19 @@ def decision_section(plan):
             + "\n\n_Not included: egress, NAT, monitoring, persistent disks beyond boot disks, LLM tokens, and any database you run yourself._")
 
 
-def _cheapest_single_server(scan_result):
-    """(name, vCPU, RAM GB, EUR/month excl. VAT, price date) of the smallest priced single server that fits the repo's own requests with 30% headroom, or None."""
+def _cheapest_single_server(scan_result, servers=None, ram_in_gib=False, retrieved=None):
+    """(name, vCPU, RAM, EUR/month excl. VAT, price date) of the smallest priced single server that fits the repo's own requests with 30% headroom, or None.
+    servers: rows shaped like prices.HETZNER_SERVERS (the default), cheapest first. ram_in_gib: the rows state RAM in GiB, not GB (AWS and Azure do)."""
     from nodes import cost_estimator as ce
     from knowledge import prices
     w = ce._workloads(scan_result)[0]
     cpu = sum(x["cpu_cores"] * x.get("replicas", 1) for x in w.values())
     mem, _ = ce.realistic_memory_gib(scan_result, w)
     mem = max(mem, sum(x["memory_gib"] * x.get("replicas", 1) for x in w.values()))
-    for srv in prices.HETZNER_SERVERS:
-        if srv[1] * ce.HETZNER_FILL >= cpu and srv[2] * ce.HETZNER_FILL >= mem * 1.073741824:
-            return srv[0], srv[1], srv[2], srv[4], prices.RETRIEVED
+    for srv in (servers if servers is not None else prices.HETZNER_SERVERS):
+        need_ram = mem if ram_in_gib else mem * 1.073741824
+        if srv[1] * ce.HETZNER_FILL >= cpu and srv[2] * ce.HETZNER_FILL >= need_ram:
+            return srv[0], srv[1], srv[2], srv[4], retrieved or prices.RETRIEVED
     return None
 
 
@@ -355,6 +395,8 @@ def allowed_numbers(plan):
         vals.append(plan["cheapest_full"]["total"])
     meta = plan["meta"]
     vals += [meta.get("sql"), meta.get("sql_ha"), meta.get("sql_dedicated"), meta.get("sql_dedicated_ha"), meta.get("secret_manager"), meta.get("redis_standard")]
+    for ad in (meta.get("addons") or {}).values():
+        vals += [ad.get(k) for k in ("db", "db_ha", "secrets", "redis_ha", "redis_single")]
     out = [round(v, 2) for v in vals if v is not None]
     if plan["budget"] is not None:
         out += [round(abs(plan["budget"] - v), 2) for v in out]

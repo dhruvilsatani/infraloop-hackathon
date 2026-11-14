@@ -107,6 +107,46 @@
   }
   button:hover { transform: translateY(-1px); }
   button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .targets { margin: 28px 0 8px; padding-top: 24px; border-top: 1px solid var(--card-border); font-family: 'Space Grotesk', sans-serif; }
+  .targets h3 { margin: 0 0 6px; font-size: 1.5rem; }
+  .targets p.hint { margin: 0 0 18px; font-size: 1rem; line-height: 1.55; }
+  .target { margin: 0 0 14px; border: 1px solid var(--card-border); border-radius: 14px; background: rgba(0,0,0,0.35); transition: border-color .15s ease; }
+  .target:hover { border-color: rgba(255,255,255,0.28); }
+  .target.selected { border-color: var(--accent-1); box-shadow: 0 0 0 1px var(--accent-1) inset; }
+  .target-head { all: unset; display: block; box-sizing: border-box; width: 100%; cursor: pointer; padding: 20px 22px; color: var(--text); font-family: inherit; }
+  .target-head:focus-visible { outline: 2px solid var(--accent-1); outline-offset: -2px; border-radius: 14px; }
+  .target .t-top { display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: space-between; align-items: baseline; font-size: 1.12rem; font-weight: 600; line-height: 1.35; }
+  .target .t-price { font-size: 1.25rem; font-weight: 700; white-space: nowrap; }
+  .target .t-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .target .t-catch { display: block; margin-top: 12px; font-size: 1rem; line-height: 1.55; font-weight: 400; color: var(--text); }
+  .target .t-catch b { font-weight: 700; }
+  .tag { display: inline-block; padding: 3px 11px; font-size: 0.8rem; font-weight: 600; border-radius: 999px; border: 1px solid var(--card-border); color: var(--text-dim); }
+  .tag.rec { color: #05060a; background: linear-gradient(100deg, var(--accent-1), var(--accent-2)); border-color: transparent; }
+  .tag.ok { color: var(--text); }
+  .target-body { padding: 4px 22px 22px; border-top: 1px solid var(--card-border); }
+  .target-body h4 { margin: 18px 0 10px; font-size: 1.05rem; }
+  .target-body ul { margin: 0 0 6px; padding-left: 22px; }
+  .target-body li { margin: 0 0 8px; font-size: 0.98rem; line-height: 1.55; }
+  .target-dl { margin-top: 16px; padding: 15px 20px; font-size: 1.02rem; }
+  .target-body .howto { margin: 12px 0 0; font-size: 0.9rem; line-height: 1.55; color: var(--text-dim); }
+  @media (max-width: 520px) { .target-head { padding: 16px; } .target-body { padding: 4px 16px 18px; } .targets h3 { font-size: 1.3rem; } }
+  .target-body .why { margin: 16px 0 0; padding: 12px 14px; border-radius: 10px; font-size: 0.98rem; line-height: 1.55; background: rgba(34,211,238,0.08); border: 1px solid rgba(34,211,238,0.35); }
+  .target-body .why b { font-weight: 700; }
+  .target-body ul.benefits li::marker { color: var(--accent-1); }
+  .target-body .links { margin: 14px 0 0; font-size: 0.92rem; line-height: 1.6; display: flex; flex-wrap: wrap; gap: 4px 18px; }
+  .target-body .links a { color: var(--accent-1); }
+  .files-box { margin-top: 18px; }
+  .files-box h5 { margin: 14px 0 6px; font-size: 0.78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); }
+  .file-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  .file-row .fp { font-variant-ligatures: none; flex: 1 1 220px; min-width: 0; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; overflow-wrap: anywhere; }
+  .file-row .ft { flex: 1 1 100%; font-size: 0.85rem; color: var(--text-dim); }
+  button.mini { all: unset; box-sizing: border-box; cursor: pointer; padding: 4px 11px; font-size: 0.8rem; font-weight: 600; border-radius: 8px; border: 1px solid var(--card-border); color: var(--text); }
+  button.mini:hover { border-color: var(--accent-1); }
+  button.mini:focus-visible { outline: 2px solid var(--accent-1); outline-offset: 2px; }
+  .file-view { flex: 1 1 100%; margin: 4px 0 2px; padding: 12px; max-height: 320px; overflow: auto; white-space: pre; font: 0.8rem/1.5 'JetBrains Mono', monospace; font-variant-ligatures: none; background: rgba(0,0,0,0.5); border: 1px solid var(--card-border); border-radius: 8px; }
+  .files-box .tip { margin: 12px 0 0; font-size: 0.88rem; line-height: 1.55; color: var(--text-dim); }
+  .files-box .tip code { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; }
+  #gen-note { margin: 10px 0 0; font-size: 0.85rem; color: var(--text-dim); min-height: 1.2em; }
   button.secondary { color: var(--text); background: rgba(255,255,255,0.07); border: 1px solid var(--card-border); font-weight: 500; }
   .choices { display: flex; flex-wrap: wrap; gap: 8px; }
   .choice { margin: 0; width: auto; padding: 9px 14px; font-size: 0.85rem; font-weight: 500; color: var(--text); background: rgba(0,0,0,0.35); border: 1px solid var(--card-border); }
@@ -272,47 +312,25 @@
   </div>
 
   <!-- STEP 3 -->
-  <div class="card hidden" id="step-report" style="max-width: 820px;">
+  <div class="card hidden" id="step-report" style="max-width: 920px;">
     <h2>Production readiness report</h2>
     <div class="example-banner hidden" id="example-banner">Example report. InfraLoop produced this for a real public project (Google&rsquo;s Online Boutique demo: 12 services, Kubernetes, Terraform), with the answers shown in the report. Nothing here is made up for the demo.</div>
     <div class="report-body" id="report-text"></div>
+    <div class="targets hidden" id="targets-box">
+      <h3>Where do you want to run it?</h3>
+      <p class="hint">All prices are the ones in the report above. Google Cloud prices come from Google's pages; AWS, Azure and Hetzner prices come from their own price lists (the note on each card says what is included). Click an option to see what you get and what you give up with it, and download its files from the same card. You can switch and download again any time.</p>
+      <div id="targets-list"></div>
+    </div>
     <button class="secondary" id="report-back" onclick="goBack('questions')">&larr; Back to questions</button>
     <button class="secondary" id="report-dl-md" onclick="downloadReport('md')">Download .md</button>
     <button class="secondary" id="report-dl-json" onclick="downloadReport('json')">Download .json</button>
+    <button class="secondary" id="report-gen" onclick="downloadStarterFiles()">Download starter files (.zip)</button>
+    <div id="gen-note" role="status"></div>
     <button id="report-new" onclick="location.reload()">New scan</button>
     <button class="secondary hidden" id="report-contact" onclick="openProfile()">Want this for your repo? Get in touch</button>
   </div>
   </main>
 
-  <section class="info" aria-label="What you get">
-    <h3>What you get</h3>
-    <div class="grid">
-      <div class="tile"><h4>Gaps found in your repo</h4><p>A table of what is missing (tests, CI, backups, monitoring, secrets), each with the evidence from your files and a severity.</p></div>
-      <div class="tile"><h4>A recommended setup</h4><p>Which platform fits your scale and budget, and why, with the alternatives you did not pick.</p></div>
-      <div class="tile"><h4>A monthly cost</h4><p>Calculated from list prices for the setup it recommends, and checked against your budget.</p></div>
-    </div>
-    <p class="not">InfraLoop writes a report. It does not connect to your cloud account, generate code or deploy anything.</p>
-  </section>
-  <section class="next" aria-label="Coming next">
-    <span class="tag">Coming next &middot; expected December 2026</span>
-    <h3>After the report: an agent that sees outages coming</h3>
-    <p>InfraLoop checks your project before launch. The next product is meant for after launch: a continuous, non-invasive agent for your Kubernetes cluster that reads live metrics, events and the dependency graph, and flags a failure while it is still a trend, before it becomes an outage. For each warning it gives the likely root cause and a concrete fix: a <code>kubectl</code> patch, a manifest override or a code change.</p>
-    <div class="grid">
-      <div class="tile"><h4>Memory leaks</h4><p>Memory that keeps climbing after each release, caught long before the OOM kill.</p></div>
-      <div class="tile"><h4>Disk exhaustion</h4><p>A volume that will fill up, with the date it is expected to run out.</p></div>
-      <div class="tile"><h4>Autoscaling saturation</h4><p>An HPA that is about to hit its maximum replicas while load is still rising.</p></div>
-      <div class="tile"><h4>Cascading latency</h4><p>A slow dependency that is about to drag its callers down with it.</p></div>
-    </div>
-    <div class="roadmap">
-      <h4>Also on the roadmap for InfraLoop</h4>
-      <ul>
-        <li>Writes the infrastructure files for you: a Dockerfile and Terraform for the setup it recommends, ready for you to review before you use them.</li>
-        <li>Higher accuracy in the current report: more real-world projects tested, and every finding checked against evidence from your files.</li>
-      </ul>
-    </div>
-    <p class="fine">Read-only access to telemetry, no changes to your cluster unless you apply a suggested fix yourself. Interested? Use the contact button at the top.</p>
-  </section>
-  <footer>Private review preview. Files you upload are deleted right after the scan, secret files are never uploaded, and nothing on this page is tracked. <br />Cost figures are estimates from list prices at the time of the scan. Parts of the report are written by an AI model; check the evidence column before you act on a finding.</footer>
 
   </div>
 
@@ -722,6 +740,7 @@ async function submitAnswers() {
       document.getElementById("step-questions").classList.add("hidden");
       document.getElementById("step-report").classList.remove("hidden");
       setStep("report");
+      loadTargets();
     }
   } catch (e) {
     errBox.innerHTML = `<div class="error-box">${e.message}</div>`;
@@ -776,12 +795,210 @@ document.addEventListener("DOMContentLoaded", () => {
 })();
 
 let lastReport = "";
+let selectedTarget = null;
+let lastChoiceMd = "";
+
+function selectTarget(list, card, t) {
+  list.querySelectorAll(".target").forEach(c => {
+    c.classList.remove("selected");
+    c.querySelector(".target-body").hidden = true;
+    c.querySelector(".target-head").setAttribute("aria-expanded", "false");
+  });
+  card.classList.add("selected");
+  card.querySelector(".target-body").hidden = false;
+  card.querySelector(".target-head").setAttribute("aria-expanded", "true");
+  selectedTarget = t.id; lastChoiceMd = t.brief || "";
+  showFiles(card.querySelector(".files-box"), t.id);
+}
+
+const previewCache = {};
+
+async function showFiles(box, id) {
+  if (!box || !sessionId) return;
+  if (box.dataset.done) return;
+  box.textContent = "Checking what is in the download...";
+  try {
+    if (!previewCache[id]) {
+      const res = await fetch("/preview", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({session_id: sessionId, target: id})});
+      if (!res.ok) throw new Error("Error " + res.status);
+      previewCache[id] = await res.json();
+    }
+    renderFiles(box, previewCache[id]);
+    box.dataset.done = "1";
+  } catch (e) { box.textContent = ""; }
+}
+
+function fileRow(f) {
+  const row = document.createElement("div"); row.className = "file-row";
+  const p = document.createElement("span"); p.className = "fp"; p.textContent = f.path;
+  const view = document.createElement("button"); view.type = "button"; view.className = "mini"; view.textContent = "View";
+  const copy = document.createElement("button"); copy.type = "button"; copy.className = "mini"; copy.textContent = "Copy";
+  row.append(p, view, copy);
+  if (f.title) { const t = document.createElement("span"); t.className = "ft"; t.textContent = f.title; row.append(t); }
+  let pre = null;
+  view.addEventListener("click", () => {
+    if (pre) { pre.remove(); pre = null; view.textContent = "View"; return; }
+    pre = document.createElement("pre"); pre.className = "file-view"; pre.textContent = f.content;
+    row.append(pre); view.textContent = "Hide";
+  });
+  copy.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(f.content); copy.textContent = "Copied"; }
+    catch (e) { copy.textContent = "Select and copy from View"; }
+    setTimeout(() => { copy.textContent = "Copy"; }, 1800);
+  });
+  return row;
+}
+
+function renderFiles(box, data) {
+  box.textContent = "";
+  const groups = [
+    ["Read these first", data.docs || []],
+    ["Files for this hosting choice", (data.files || []).filter(f => f.group === "cloud")],
+    ["Basic files (they fit any provider)", (data.files || []).filter(f => f.group !== "cloud")],
+  ];
+  const all = [...(data.docs || []), ...(data.files || [])];
+  const h = document.createElement("h4"); h.textContent = "What is in the download (" + all.length + " file" + (all.length === 1 ? "" : "s") + ")";
+  box.append(h);
+  groups.forEach(([title, rows]) => {
+    if (!rows.length) return;
+    const g = document.createElement("h5"); g.textContent = title; box.append(g);
+    rows.forEach(f => box.append(fileRow(f)));
+  });
+  if ((data.advice || []).length) {
+    const g = document.createElement("h5"); g.textContent = "Fixes for files you already have (written up in MANIFEST.md)"; box.append(g);
+    data.advice.forEach(a => { const d = document.createElement("div"); d.className = "file-row"; const t = document.createElement("span"); t.className = "ft"; t.textContent = a.title; d.append(t); box.append(d); });
+  }
+  if (all.some(f => f.path.split("/").some(x => x.startsWith(".")))) {
+    const tip = document.createElement("p"); tip.className = "tip";
+    tip.innerHTML = "Files keep their folder paths. On a Mac, Finder hides names that start with a dot (<code>.github</code>, <code>.dockerignore</code>, <code>.env.example</code>): press <code>Cmd + Shift + .</code> in Finder to show them, or open the unzipped folder in your code editor.";
+    box.append(tip);
+  }
+}
+
+function buildTargetCard(list, t) {
+  const card = document.createElement("div");
+  card.className = "target"; card.dataset.id = t.id;
+
+  const head = document.createElement("button");
+  head.type = "button"; head.className = "target-head"; head.setAttribute("aria-expanded", "false");
+  const price = t.monthly_eur == null ? "" : t.monthly_eur.toFixed(2) + " EUR/month";
+  const tags = (t.recommended ? '<span class="tag rec">Recommended in the report</span>' : "")
+    + (t.files ? '<span class="tag ok">Files available</span>' : '<span class="tag">Report only, no files yet</span>')
+    + (t.zone_ha === true ? '<span class="tag ok">Survives a zone outage</span>' : t.zone_ha === false ? '<span class="tag">Single zone</span>' : "");
+  head.innerHTML = '<span class="t-top"><span>' + esc(t.label) + '</span><span class="t-price">' + esc(price) + '</span></span>'
+    + '<span class="t-tags">' + tags + '</span>'
+    + (t.catch ? '<span class="t-catch"><b>The catch:</b> ' + esc(t.catch) + '</span>' : "");
+
+  const body = document.createElement("div");
+  body.className = "target-body"; body.hidden = true;
+  if ((t.why || []).length) {
+    const w = document.createElement("p"); w.className = "why";
+    const b = document.createElement("b"); b.textContent = "Why we recommend it: ";
+    w.append(b, document.createTextNode(t.why.join(" ")));
+    body.append(w);
+  }
+  if (t.price_note) {
+    const pn = document.createElement("p"); pn.className = "howto";
+    const b = document.createElement("b"); b.textContent = "About this price: ";
+    pn.append(b, document.createTextNode(t.price_note));
+    body.append(pn);
+  }
+  if ((t.benefits || []).length) {
+    const h = document.createElement("h4"); h.textContent = "What you get with " + (t.short || "this option");
+    const ul = document.createElement("ul"); ul.className = "benefits";
+    t.benefits.forEach(x => { const li = document.createElement("li"); li.textContent = x; ul.appendChild(li); });
+    body.append(h, ul);
+  }
+  if ((t.drawbacks || []).length) {
+    const h = document.createElement("h4"); h.textContent = "What you give up with " + (t.short || "this option");
+    const ul = document.createElement("ul");
+    t.drawbacks.forEach(x => { const li = document.createElement("li"); li.textContent = x; ul.appendChild(li); });
+    body.append(h, ul);
+  }
+  if ((t.links || []).length) {
+    const p = document.createElement("p"); p.className = "links";
+    t.links.forEach(l => {
+      if (!/^https:\/\//.test(l.url)) return;
+      const a = document.createElement("a"); a.href = l.url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = l.label + " \u2197";
+      p.append(a);
+    });
+    if (p.childNodes.length) body.append(p);
+  }
+  const filesBox = document.createElement("div"); filesBox.className = "files-box"; filesBox.dataset.for = t.id;
+  body.append(filesBox);
+  const dl = document.createElement("button");
+  dl.type = "button"; dl.className = "target-dl";
+  const SERVER_NAMES = {"hetzner-server": "Hetzner", "aws-server": "AWS", "azure-server": "Azure"};
+  const cloud = SERVER_NAMES[t.id];
+  dl.textContent = cloud ? "Download the " + cloud + " files (.zip)"
+    : t.files ? "Download the basic files (.zip)" : "Download the basic files and notes (.zip)";
+  const note = document.createElement("p");
+  note.className = "howto"; note.setAttribute("role", "status");
+  const idle = cloud
+    ? "You get a zip with the server files (Terraform and docker-compose), the basic files and a step-by-step guide. Unzip it and open IMPLEMENTATION.md first. Nothing is applied for you."
+    : t.files ? "You get a zip with the basic files and a step-by-step guide. Unzip it, open IMPLEMENTATION.md first, then copy what you want into your project."
+    : "There are no infrastructure files for " + (t.short || "this option") + " yet. The zip has the basic files, a step-by-step guide and a SETUP.md that explains this choice.";
+  note.textContent = idle;
+  dl.addEventListener("click", () => downloadStarterFiles(note, idle, dl));
+  body.append(dl, note);
+
+  head.addEventListener("click", () => selectTarget(list, card, t));
+  card.append(head, body);
+  return card;
+}
+
+async function loadTargets() {
+  const box = document.getElementById("targets-box"), list = document.getElementById("targets-list");
+  selectedTarget = null; lastChoiceMd = ""; list.innerHTML = ""; box.classList.add("hidden");
+  Object.keys(previewCache).forEach(k => delete previewCache[k]);
+  document.getElementById("report-gen").classList.remove("hidden"); document.getElementById("gen-note").classList.remove("hidden");
+  if (!sessionId) return;
+  try {
+    const res = await fetch("/targets", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({session_id: sessionId})});
+    if (!res.ok) return;
+    const ts = (await res.json()).targets || [];
+    if (!ts.length) return;
+    const cards = ts.map(t => ({t, card: buildTargetCard(list, t)}));
+    cards.forEach(c => list.appendChild(c.card));
+    const first = cards.find(c => c.t.recommended) || cards[0];
+    selectTarget(list, first.card, first.t);
+    box.classList.remove("hidden");
+    // each card has its own download button now, so the generic one at the bottom is not needed
+    document.getElementById("report-gen").classList.add("hidden"); document.getElementById("gen-note").classList.add("hidden");
+  } catch (e) { /* the choice list is optional: the basic download at the bottom still works */ }
+}
+
+async function downloadStarterFiles(noteEl, idleText, btn) {
+  const note = noteEl || document.getElementById("gen-note");
+  if (!sessionId) { note.textContent = "Scan a project first."; return; }
+  note.textContent = "Preparing your files...";
+  if (btn) btn.disabled = true;
+  try {
+    const res = await fetch("/generate", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({session_id: sessionId, target: selectedTarget})});
+    if (!res.ok) { let d = ""; try { d = (await res.json()).detail; } catch (e) {} throw new Error(d || ("Error " + res.status)); }
+    const n = res.headers.get("X-Files-Generated") || "0";
+    const f = res.headers.get("X-Fixes-Advised") || "0";
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "infraloop-generated.zip";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    const parts = [];
+    if (n !== "0") parts.push(n + " new file(s)");
+    if (f !== "0") parts.push(f + " fix(es) for files you already have");
+    note.textContent = (parts.length ? "Downloaded: " + parts.join(" and ") + ". " : "Nothing could be generated for the gaps in this report. ")
+      + "Open IMPLEMENTATION.md first.";
+  } catch (e) { note.textContent = "Could not generate files: " + e.message; }
+  finally { if (btn) btn.disabled = false; }
+}
+
 function downloadReport(kind) {
   if (!lastReport) return;
   const day = new Date().toISOString().slice(0, 10);
+  const full = lastReport + (lastChoiceMd ? "\n\n---\n\n" + lastChoiceMd : "");
   const body = kind === "json"
-    ? JSON.stringify({tool: "InfraLoop", generated: day, format: "markdown", report: lastReport}, null, 2)
-    : lastReport;
+    ? JSON.stringify({tool: "InfraLoop", generated: day, format: "markdown", report: full}, null, 2)
+    : full;
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([body], {type: kind === "json" ? "application/json" : "text/markdown"}));
   a.download = `infraloop-report-${day}.${kind === "json" ? "json" : "md"}`;

@@ -24,7 +24,14 @@ def main(argv=None):
     sc.add_argument("--out", help="write to this file instead of the terminal")
     sc.add_argument("--ai", action="store_true", help="use the AI model for the report text")
     sc.add_argument("--fail-on-high", action="store_true", help="exit with code 2 when a high or critical gap is found")
+    gn = sub.add_parser("generate", help="scan a repository and write starter files for the gaps (Dockerfile, CI, ...) into a NEW folder")
+    gn.add_argument("target", help="local folder or public git URL")
+    gn.add_argument("--out", default="infraloop-generated", help="new folder to write into (must not exist or be empty; nothing is ever overwritten)")
+    gn.add_argument("--target", dest="run_on", choices=("hetzner-server", "aws-server", "azure-server", "not-yet"), default="not-yet",
+                    help="where it will run: hetzner-server, aws-server or azure-server adds Terraform + docker-compose for one server there (default: just the basic files)")
     a = ap.parse_args(argv)
+    if a.cmd == "generate":
+        return _generate(a)
 
     os.environ["INFRALOOP_MODE"] = "ai" if a.ai else "offline"
     from ingest import resolve_repo_path
@@ -59,6 +66,40 @@ def main(argv=None):
     else:
         print(out)
     return 2 if (a.fail_on_high and high) else 0
+
+
+def _generate(a):
+    import contextlib
+    from ingest import resolve_repo_path
+    from scanner.scan import scan_repo
+    from nodes.gap_identifier import identify_gaps
+    import generators
+    path, temp = resolve_repo_path(a.target)
+    try:
+        with contextlib.redirect_stdout(sys.stderr):
+            scan = scan_repo(path)
+            gaps = identify_gaps(scan)
+    finally:
+        if temp:
+            shutil.rmtree(path, ignore_errors=True)
+    chosen = generators.find_target(generators.build_targets(scan, None, gaps), a.run_on)
+    if a.run_on != "not-yet" and not chosen:
+        print("This project is too large for a single server of that provider (or has no service the templates cover).", file=sys.stderr)
+        return 1
+    bundle = generators.generate_files(scan, gaps, chosen)
+    try:
+        written = generators.write_to_dir(bundle, a.out)
+    except FileExistsError as e:
+        print(str(e), file=sys.stderr)
+        return 1
+    for w in written:
+        print("wrote", w)
+    for adv in bundle.advice:
+        print(f"fix by hand (see MANIFEST.md): {adv.gap} -- {adv.title}")
+    for sk in bundle.skipped:
+        print(f"not generated: {sk.gap} -- {sk.reason}")
+    print(f"\nRead {os.path.join(a.out, 'MANIFEST.md')} before you copy anything into your repository.")
+    return 0
 
 
 if __name__ == "__main__":

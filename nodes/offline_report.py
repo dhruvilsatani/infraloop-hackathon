@@ -56,7 +56,7 @@ def _needs_line(scan):
     return "- What it needs to run, on any provider: " + " and ".join(parts) + "."
 
 
-_PLATFORM = {"gke_autopilot": "GKE Autopilot", "cloud_run": "Cloud Run (always-on)"}
+_PLATFORM = {"gke_autopilot": "GKE Autopilot", "cloud_run": "Cloud Run (always-on)", "aws_fargate": "AWS ECS Fargate", "azure_container_apps": "Azure Container Apps"}
 
 
 def _section3(scan, plan, describe):

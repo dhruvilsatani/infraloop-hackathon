@@ -129,9 +129,9 @@ def _pods(w, rps, min_rep):
 def price_tier(rps, plan, workloads, ce):
     """Total EUR/month for one tier on the platform of the chosen plan, plus pods per service. Uses the planner's own totals for fixed parts."""
     o = plan["chosen"]
-    fn = ce._autopilot if o["platform"] == "gke_autopilot" else ce._cloud_run_always_on
+    fn = ce.PLATFORM_FN.get(o["platform"], ce._cloud_run_always_on)
     stateful = set(o.get("stateful_kept_single") or [])
-    pods, usd, shown = {}, 0.0, []
+    pods, usd, shown, tier_copies = {}, 0.0, [], len(stateful)
     for n in o["service_names"]:
         w = workloads.get(n)
         if not w:
@@ -143,8 +143,11 @@ def price_tier(rps, plan, workloads, ce):
         usd += fn(dict(w, cpu_cores=cpu, memory_gib=mem, replicas=r))
         pods[n] = (cpu, mem, r)
         shown.append(r)
+        tier_copies += r
     base_compute = ce._eur(sum(fn(dict(workloads[n], replicas=1)) * (1 if n in stateful else o["replicas"]) for n in o["service_names"] if n in workloads))
     other = plan["total"] - base_compute               # cluster fee + load balancer + database/Redis extras, exactly as the plan priced them
+    if o["platform"] == "aws_fargate":                 # AWS charges a public address per running task, so more tasks at a bigger tier cost more
+        other += ce._aws_task_address_eur(tier_copies - o.get("copies", tier_copies))
     return round(ce._eur(usd) + other, 2), pods, (min(shown) if shown else 0, max(shown) if shown else 0)
 
 
