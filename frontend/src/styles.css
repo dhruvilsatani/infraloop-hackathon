@@ -139,6 +139,18 @@ button, input, textarea { font-family: inherit; }
 .footer-row { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; color: var(--ink); }
 .footer-fine { margin-top: 12px; font-size: 0.82rem; }
 
+/* Stepper: Scan - Answer - Report - Configure - Files */
+.stepper { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; gap: 0; flex-wrap: wrap; }
+.stepper li { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 0.95rem; }
+.stepper li + li::before { content: ''; display: block; width: 56px; height: 2px; background: var(--line); margin: 0 14px; }
+.stepper li.done + li::before { background: var(--green); }
+.stepper .step-dot { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--line); font-size: 0.85rem; font-weight: 600; background: var(--bg); color: var(--muted); flex: 0 0 auto; }
+.stepper li.done .step-dot { border-color: var(--green); color: var(--green); }
+.stepper li.active .step-dot { background: var(--green); border-color: var(--green); color: #fff; }
+.stepper li.active .step-label { color: var(--ink); font-weight: 600; }
+.stepper .step-label { white-space: nowrap; }
+@media (max-width: 640px) { .stepper li + li::before { width: 18px; margin: 0 8px; } }
+
 /* Wizard shared */
 .wizard-page { padding-top: 28px; padding-bottom: 72px; }
 .page-title { font-size: clamp(1.9rem, 3.4vw, 2.5rem); margin: 34px 0 10px; line-height: 1.15; }
