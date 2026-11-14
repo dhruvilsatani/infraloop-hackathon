@@ -17,7 +17,7 @@
     </div>
     <div class="preview-section">
       <p class="mono muted">Gaps found</p>
-      @for (gap of data.gaps; track gap.name) {
+      @for (gap of exampleGaps; track gap.name) {
         <div class="preview-row">
           <span>{{ gap.name }}</span>
           <span class="bar" aria-hidden="true"></span>

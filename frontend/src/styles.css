@@ -204,7 +204,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .pill { display: inline-block; margin-left: var(--space-2); padding: 2px var(--space-2); border-radius: var(--radius-sm); font-size: var(--text-xs); font-weight: 500; vertical-align: middle; }
 .pill-green { background: var(--green-soft); color: var(--green); }
 .sev, .gap-tag { display: inline-block; padding: var(--space-1) var(--space-3); border-radius: var(--radius-sm); font-size: var(--text-sm); font-weight: 500; white-space: nowrap; }
-.sev-high, .sev-bg-high { background: var(--red-soft); color: var(--red-ink); }
+.sev-critical, .sev-high, .sev-bg-high { background: var(--red-soft); color: var(--red-ink); }
 .sev-medium, .sev-bg-medium { background: var(--amber-soft); color: var(--amber-ink); }
 .sev-low, .sev-bg-low { background: var(--green-soft); color: var(--low-ink); }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); }
