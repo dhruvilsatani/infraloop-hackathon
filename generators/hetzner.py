@@ -10,6 +10,11 @@ from .context import services, join
 from .docker import _commented
 
 PORT = {"python": 8000, "node": 3000, "go": 8080}
+
+
+def port_of(s):
+    """The port the repo's own Dockerfile EXPOSEs, else the template default for the language."""
+    return s.port or PORT[s.kind]
 TF = "infra/hetzner"
 
 _MAIN = '''terraform {
@@ -198,7 +203,7 @@ def _compose(svcs):
     L = [_commented(HEADER).rstrip("\n"), "services:"]
     for s in svcs:
         L += [f"  {s.slug}:", f"    build: {'.' if s.path in ('', '.') else './' + s.path}", "    restart: unless-stopped", "    env_file: .env",
-              f"    expose: [\"{PORT[s.kind]}\"]"]
+              f"    expose: [\"{port_of(s)}\"]"]
     first = svcs[0]
     L += ["  caddy:", "    image: caddy:2", "    restart: unless-stopped", "    ports: [\"80:80\", \"443:443\"]",
           "    environment:", "      SITE_ADDRESS: ${SITE_ADDRESS:-:80}",
@@ -244,12 +249,13 @@ def pack(scan, gaps, target):
         art(f"{TF}/terraform.tfvars.example", _TFVARS, "Terraform: example values", conf="high"),
         art(f"{TF}/.gitignore", _GITIGNORE, "Keeps Terraform state and your values out of git", conf="high"),
         art("docker-compose.prod.yml", _compose(svcs), "docker-compose file for the server",
-            [f"Each service listens on its template port ({', '.join(f'{s.slug}: {PORT[s.kind]}' for s in svcs)}).",
+            [f"Each service listens on port ({', '.join(f'{s.slug}: {port_of(s)}' for s in svcs)}).",
              f"Only `{first.slug}` is reachable from outside, through Caddy."],
-            ["Caddy gets a free HTTPS certificate only when `domain` is set and its DNS record points at the server.",
+            ["If your own Dockerfile listens on a different port than the one above, change `expose` here and the upstream in `deploy/Caddyfile`; the pack cannot read the port from your Dockerfile.",
+             "Caddy gets a free HTTPS certificate only when `domain` is set and its DNS record points at the server.",
              "`caddy:2` follows the latest 2.x release: pin an exact version once it works.",
              "A database is not part of this file. Add one as another service with a volume, or use a managed database and put its address in `/opt/app/.env`."]
             + ([f"Only `{first.slug}` is exposed; the other services start but nothing routes to them."] if len(svcs) > 1 else [])),
-        art("deploy/Caddyfile", _CADDY.replace("@@UPSTREAM@@", f"{first.slug}:{PORT[first.kind]}"), "Reverse proxy configuration", conf="medium"),
+        art("deploy/Caddyfile", _CADDY.replace("@@UPSTREAM@@", f"{first.slug}:{port_of(first)}"), "Reverse proxy configuration", conf="medium"),
     ]
     return files, []

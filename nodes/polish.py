@@ -100,7 +100,8 @@ def polish(base, scan_json, answers_json, rules, call, ar):
     raw = call(PROMPT.format(base=body, answers=answers_json, rules=rules))
     blocks = _parse(raw)
     if not blocks:
-        raise ValueError("model answer had none of the required blocks")
+        seen = " ".join(str(raw).split())[:300]
+        raise ValueError(f"model answer had none of the required blocks. The model said: {seen!r}")
     allowed = claim_check.build_allowed(body, scan_json, answers_json)
     removed_all, out = [], base
     mini = {"SUMMARY": 1, "S1": 1, "S3": 3, "S5": 5}

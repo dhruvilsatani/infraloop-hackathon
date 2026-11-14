@@ -8,7 +8,7 @@ Written from scan facts only. Rules this pack keeps (the same as the Hetzner pac
 from .model import Artifact, HEADER
 from .context import services
 from .docker import _commented
-from .hetzner import PORT, _CLOUD_INIT, _CADDY, _GITIGNORE, _compose
+from .hetzner import PORT, port_of, _CLOUD_INIT, _CADDY, _GITIGNORE, _compose
 
 TF = "infra/azure"
 
@@ -285,12 +285,12 @@ def pack(scan, gaps, target):
         art(f"{TF}/terraform.tfvars.example", _TFVARS, "Terraform: example values", conf="high"),
         art(f"{TF}/.gitignore", _GITIGNORE, "Keeps Terraform state and your values out of git", conf="high"),
         art("docker-compose.prod.yml", _compose(svcs), "docker-compose file for the server",
-            [f"Each service listens on its template port ({', '.join(f'{s.slug}: {PORT[s.kind]}' for s in svcs)}).",
+            [f"Each service listens on port ({', '.join(f'{s.slug}: {port_of(s)}' for s in svcs)}).",
              f"Only `{first.slug}` is reachable from outside, through Caddy."],
             ["Caddy gets a free HTTPS certificate only when `domain` is set and its DNS record points at the server's public IP.",
              "`caddy:2` follows the latest 2.x release: pin an exact version once it works.",
              "A database is not part of this file. Add one as another service with a volume, or use a managed database and put its address in `/opt/app/.env`."]
             + ([f"Only `{first.slug}` is exposed; the other services start but nothing routes to them."] if len(svcs) > 1 else [])),
-        art("deploy/Caddyfile", _CADDY.replace("@@UPSTREAM@@", f"{first.slug}:{PORT[first.kind]}"), "Reverse proxy configuration", conf="medium"),
+        art("deploy/Caddyfile", _CADDY.replace("@@UPSTREAM@@", f"{first.slug}:{port_of(first)}"), "Reverse proxy configuration", conf="medium"),
     ]
     return files, []

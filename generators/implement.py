@@ -109,12 +109,12 @@ def implementation_md(bundle, scan):
         L += ["For each service, build the image and start it. A service that fails here would fail on a server too, so fix it now:", ""]
         for s, df in dockerfiles:
             folder = "." if s.path in ("", ".") else s.path
-            port = PORT[s.kind]
+            port = s.port or PORT[s.kind]
             L += [f"**{s.slug}** (`{df}`):", "", "```", *([f"cd {folder}"] if folder != "." else []), f"docker build -t {s.slug} .", f"docker run --rm -p {port}:{port} {'--env-file .env ' if env_names else ''}{s.slug}", "```", ""]
         if env_names:
             L += [f"The app reads these variables: {', '.join('`' + v + '`' for v in env_names[:12])}{' and more' if len(env_names) > 12 else ''}. "
                   "`.env.example` lists the names. Copy it to `.env`, fill in test values, and keep `.env` out of git (it is in the generated `.dockerignore`; add it to `.gitignore` too).", ""]
-        ports = " or ".join(f"`http://localhost:{PORT[s.kind]}`" for s, _ in dockerfiles)
+        ports = " or ".join(f"`http://localhost:{s.port or PORT[s.kind]}`" for s, _ in dockerfiles)
         L += [f"Then open {ports} in a browser (the port is the one the template assumed: change it if your app listens on another). If it does not answer, read the output of `docker run`: it usually says what is missing.", ""]
     else:
         L += ["The scan found no service the templates cover, so there is no image to build yet. Add a Dockerfile for your app first.", ""]

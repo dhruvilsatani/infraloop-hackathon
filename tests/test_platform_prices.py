@@ -167,7 +167,7 @@ class AddOns(unittest.TestCase):
             s, data, plan = self.run_plan(plat, ans, redis=True)
             base = option(data["plan_options"], plat, 2)["total"]
             managed = eur(2 * 0.036 * H) if plat == "aws_fargate" else 0.1214 * H
-            self.assertAlmostEqual(plan["total"], base + managed - eur(fn(0.07, 0.2)), delta=0.05, msg=plat)
+            self.assertAlmostEqual(plan["total"], base + managed - eur(fn(0.25, 0.5)), delta=0.05, msg=plat)
             self.assertTrue(any(("ElastiCache" in n) if plat == "aws_fargate" else ("Azure Cache for Redis" in n) for n in plan["notes"]), plan["notes"])
 
     def test_google_database_numbers_and_wording_are_unchanged(self):
@@ -252,8 +252,8 @@ class ReportTables(unittest.TestCase):
     def test_the_total_row_adds_up(self):
         row = next(l for l in self.text.splitlines() if l.startswith("| **Total**"))
         cells = [c.strip().strip("*") for c in row.strip("|").split("|")]
-        fargate = eur(((0.25 + 0.07) * 0.04656 + (0.5 + 0.2) * 0.00511) * H)
-        aca = eur(((0.25 + 0.07) * 0.000034 + (0.5 + 0.2) * 0.000004) * S)
+        fargate = eur(2 * (0.25 * 0.04656 + 0.5 * 0.00511) * H)   # both tasks are at the 0.25 vCPU / 0.5 GB minimum
+        aca = eur(2 * (0.25 * 0.000034 + 0.5 * 0.000004) * S)
         self.assertAlmostEqual(float(cells[5]), fargate, places=2)
         self.assertAlmostEqual(float(cells[6]), aca, places=2)
 
@@ -301,6 +301,7 @@ class LoadTiers(unittest.TestCase):
         top = load_tiers.TIERS[-1][3]
         total, pods, _ = load_tiers.price_tier(top, plan, workloads, ce)
         cpu, mem, r = pods["web"]
+        cpu, mem = ce.fargate_size({"cpu_cores": cpu, "memory_gib": mem})
         compute = eur((cpu * 0.04656 + mem * 0.00511) * H * r)
         fixed = eur((0.027 + 2 * 0.005) * H + r * 0.005 * H)
         self.assertAlmostEqual(total, compute + fixed, places=1)
@@ -367,6 +368,86 @@ class Comparison(unittest.TestCase):
         self.assertEqual(platforms, {"gke_autopilot", "cloud_run", "aws_fargate", "azure_container_apps"})
         self.assertLessEqual(len(plan["alternatives"]), 4)
         self.assertEqual([a["total"] for a in plan["alternatives"]], sorted(a["total"] for a in plan["alternatives"]))
+
+
+
+class PlatformMinimums(unittest.TestCase):
+    """AWS docs: smallest Fargate task is 0.25 vCPU / 0.5 GB, and from 0.5 vCPU up memory is at least 2 GB per vCPU.
+    Azure docs: smallest Container Apps size is 0.25 vCPU / 0.5 GiB, memory is twice the vCPU."""
+
+    def test_tiny_services_are_priced_at_the_fargate_minimum(self):
+        self.assertEqual(ce.fargate_size({"cpu_cores": 0.1, "memory_gib": 0.12}), (0.25, 0.5))
+
+    def test_fargate_rounds_up_to_a_valid_size_and_keeps_two_gb_per_vcpu(self):
+        self.assertEqual(ce.fargate_size({"cpu_cores": 0.6, "memory_gib": 1}), (1, 2))
+        self.assertEqual(ce.fargate_size({"cpu_cores": 1, "memory_gib": 6}), (1, 6))
+
+    def test_container_apps_minimum_and_two_to_one_memory(self):
+        self.assertEqual(ce.container_apps_size({"cpu_cores": 0.1, "memory_gib": 0.12}), (0.25, 0.5))
+        self.assertEqual(ce.container_apps_size({"cpu_cores": 0.3, "memory_gib": 0.5}), (0.5, 1.0))
+        self.assertEqual(ce.container_apps_size({"cpu_cores": 0.25, "memory_gib": 2}), (1.0, 2.0))
+
+    def test_mlflow_is_treated_as_stateful(self):
+        self.assertIn("mlflow", ce._STATEFUL_NAME_TOKENS)
+
+    def test_the_report_says_it_is_a_lower_bound_and_names_the_minimum(self):
+        text, _ = build_cost_estimate(scan_one())
+        self.assertIn("0.25 vCPU with 0.5 GB", text)
+        self.assertIn("lower bound", text)
+
+
+class ZeroDowntimeWarning(unittest.TestCase):
+    def test_single_server_cards_say_they_do_not_meet_zero_downtime(self):
+        from generators import targets
+        s = scan_one()
+        _, data = build_cost_estimate(s)
+        plan = planner.choose_plan(s, {BUDGET: "5000", DOWNTIME: "None (zero downtime)"}, data)
+        cards = targets.build_targets(s, plan)
+        servers = [t for t in cards if t["id"] in (targets.HETZNER, targets.AWS, targets.AZURE)]
+        self.assertTrue(servers)
+        for t in servers:
+            self.assertIn("does NOT meet", t["note"])
+            self.assertFalse(t["recommended"])
+        self.assertEqual(sum(1 for t in cards if t["recommended"]), 1)
+
+
+class PortFromTheRepo(unittest.TestCase):
+    def test_the_pack_uses_the_port_the_repos_dockerfile_exposes(self):
+        from generators.context import Svc
+        from generators import hetzner
+        svc = Svc(path=".", kind="python", port=5000)
+        self.assertIn('expose: ["5000"]', hetzner._compose([svc]))
+        self.assertEqual(hetzner.port_of(Svc(path=".", kind="node")), 3000)   # no EXPOSE found: the language default
+
+    def test_the_scanner_reads_expose_from_a_dockerfile(self):
+        import os, tempfile
+        from scanner.layer6_runtime import detect_runtime_picture
+        with tempfile.TemporaryDirectory() as d:
+            open(os.path.join(d, "Dockerfile"), "w").write("FROM python:3.12\nEXPOSE 5000\n")
+            open(os.path.join(d, "requirements.txt"), "w").write("flask\n")
+            open(os.path.join(d, "app.py"), "w").write("x = 1\n")
+            pic = detect_runtime_picture(d)
+        listed = (pic.get("services") or {}).get("list", []) if isinstance(pic.get("services"), dict) else pic.get("services", [])
+        self.assertEqual([x.get("port") for x in listed], [5000])
+
+
+class StatefulConsistency(unittest.TestCase):
+    def setUp(self):
+        s = scan_one(redis=True)
+        self.text, self.data = build_cost_estimate(s)
+        self.plan = planner.choose_plan(s, {BUDGET: "5000", DOWNTIME: "None (zero downtime)"}, self.data)
+
+    def test_ready_made_two_copy_totals_keep_the_datastore_at_one_copy_like_every_other_platform(self):
+        two = {o["platform"]: o for o in self.data["plan_options"] if o["set"] == "all" and o["replicas"] == 2}
+        scen = dict(self.data["scenarios"])
+        for plat in ("gke_autopilot", "cloud_run"):
+            self.assertAlmostEqual(scen[two[plat]["label"]], two[plat]["total"], places=2)
+
+    def test_zone_column_does_not_say_plain_yes_when_a_datastore_is_a_single_copy(self):
+        section = planner.decision_section(self.plan)
+        row = next(l for l in section.splitlines() if l.startswith("| **Recommended"))
+        if self.plan["chosen"].get("stateful_kept_single") and not any("Redis" in n for n in self.plan["notes"]):
+            self.assertIn("yes, except", row)
 
 
 if __name__ == "__main__":

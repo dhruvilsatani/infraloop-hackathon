@@ -30,15 +30,34 @@ def _cloud_run_always_on(w):
     return per_second * SECONDS_PER_MONTH * w["replicas"]
 
 
+FARGATE_VCPU_STEPS = (0.25, 0.5, 1, 2, 4)
+
+
+def fargate_size(w):
+    """Smallest Fargate task that fits the request (AWS docs: 0.25 vCPU with 0.5 GB is the smallest; from 0.5 vCPU up, memory is at least 2 GB per vCPU)."""
+    cpu = next((c for c in FARGATE_VCPU_STEPS if c >= w["cpu_cores"]), w["cpu_cores"])
+    mem = max(w["memory_gib"], 0.5, 0 if cpu < 0.5 else 2 * cpu)
+    return cpu, mem
+
+
+def container_apps_size(w):
+    """Smallest Container Apps (Consumption) size that fits: 0.25 vCPU with 0.5 GiB is the smallest, memory is always twice the vCPU."""
+    cpu = max(w["cpu_cores"], w["memory_gib"] / 2, 0.25)
+    cpu = -(-cpu * 4 // 1) / 4          # round up to a quarter vCPU
+    return cpu, cpu * 2
+
+
 def _fargate(w):
-    per_hour = w["cpu_cores"] * _p("fargate_x86_vcpu_hour") + w["memory_gib"] * _p("fargate_x86_gb_hour")
+    cpu, mem = fargate_size(w)
+    per_hour = cpu * _p("fargate_x86_vcpu_hour") + mem * _p("fargate_x86_gb_hour")
     return per_hour * HOURS_PER_MONTH * w["replicas"]
 
 
 def _container_apps(w):
     """Azure Container Apps, Consumption plan, West Europe, at the ACTIVE rate for every second of the month. Azure bills a lower rate while a
     replica is idle and gives a monthly free grant; neither is subtracted here, so the real bill can be lower."""
-    per_second = w["cpu_cores"] * _p("container_apps_vcpu_second_active") + w["memory_gib"] * _p("container_apps_gib_second_active")
+    cpu, mem = container_apps_size(w)
+    per_second = cpu * _p("container_apps_vcpu_second_active") + mem * _p("container_apps_gib_second_active")
     return per_second * SECONDS_PER_MONTH * w["replicas"]
 
 
@@ -62,7 +81,7 @@ def _norm(name):
 
 
 _STATEFUL_NAME_TOKENS = ("redis", "postgres", "mysql", "mariadb", "mongo", "kafka", "rabbitmq", "elasticsearch", "opensearch",
-                         "memcached", "cassandra", "zookeeper", "etcd", "clickhouse")
+                         "memcached", "cassandra", "zookeeper", "etcd", "clickhouse", "mlflow")
 
 
 def _workloads(scan_result):
@@ -166,7 +185,7 @@ def overlap_services(scan_result):
 
 
 _STATEFUL_TOKENS = ("redis", "postgres", "mysql", "mariadb", "mongo", "kafka", "rabbitmq", "elasticsearch", "opensearch",
-                    "memcached", "cassandra", "zookeeper", "etcd", "clickhouse")
+                    "memcached", "cassandra", "zookeeper", "etcd", "clickhouse", "mlflow")
 
 
 def _is_stateful_workload(name, scan_result):
@@ -324,8 +343,9 @@ def build_cost_estimate(scan_result):
     L.append(f"| **Total** | **{totals['cpu']:.2f}** | **{totals['mem']:.2f}** | **{_eur(totals['autopilot']):.2f}** | "
              f"**{_eur(totals['run']):.2f}** | **{_eur(totals['fargate']):.2f}** | **{_eur(totals['aca']):.2f}** |")
     L.append("\nAzure Container Apps is priced at the full ACTIVE rate for every second of the month. Azure bills a lower rate while a replica is idle and gives a "
-             "monthly free grant, and neither is subtracted here, so the real Container Apps bill can be lower. All four platforms round small requests up to "
-             "their own allowed sizes, which is not modelled.\n")
+             "monthly free grant, and neither is subtracted here, so the real Container Apps bill can be lower. AWS Fargate and Azure Container Apps do not run anything smaller than "
+             "0.25 vCPU with 0.5 GB, so smaller services are priced at that size. Google Cloud prices use the requested size as written, so a real bill can be higher "
+             "than the table where a platform rounds sizes up in other ways (treat the totals as a lower bound).\n")
 
     # ---- fixed per-month items -----------------------------------------------------
     fee = _p("gke_cluster_fee_per_hour") * HOURS_PER_MONTH
@@ -435,11 +455,12 @@ def build_cost_estimate(scan_result):
             scenarios.append(("Saving from removing the load generator at 2 replicas per service on GKE Autopilot", 2 * lg_ap))
     scenarios.append(("Cloud Run always-on, 1 load balancer, no cluster fee", _eur(totals["run"]) + lb_eur))
     has_db_option = bool((scan_result.get("dependencies") or {}).get("database_client")) and not stores
-    scenarios.append(("GKE Autopilot, 2 replicas per service, 1 load balancer",
-                      2 * ap_total + lb_eur))
-    scenarios.append(("Cloud Run always-on, 2 instances per service, 1 load balancer",
-                      2 * _eur(totals["run"]) + lb_eur))
     opts, opt_meta = plan_options(scan_result, workloads)
+    # Same rule as every other platform row: in-cluster datastores stay at ONE copy (a second copy would be a different database)
+    for plat, fallback in (("gke_autopilot", None), ("cloud_run", None)):
+        o2 = next((o for o in opts if o["platform"] == plat and o["set"] == "all" and o["replicas"] == 2), None)
+        if o2:
+            scenarios.append((o2["label"], o2["total"]))
     for o in opts:
         if o["set"] == "all" and o["platform"] in ("aws_fargate", "azure_container_apps"):
             scenarios.append((o["label"], o["total"]))

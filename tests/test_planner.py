@@ -230,7 +230,7 @@ class SecondRoundFixes(unittest.TestCase):
         two2 = next(o for o in data2["plan_options"] if o["platform"] == "gke_autopilot" and o["replicas"] == 2 and o["set"] == "all")
         self.assertEqual(two["total"], two2["total"])
         scen = dict(data["scenarios"])
-        self.assertEqual(scen["GKE Autopilot, 2 replicas per service, 1 load balancer"], two["total"])
+        self.assertEqual(scen[two["label"]], two["total"])
 
     def test_gap_table_is_built_from_scan_findings(self):
         rep = ("## 2. Gaps\n\n| Gap | Severity | Source | Risk |\n|---|---|---|---|\n"

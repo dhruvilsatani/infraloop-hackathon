@@ -19,6 +19,7 @@ class Svc:
     has_dockerfile: bool = False
     lockfile: bool = False
     slug: str = "app"
+    port: int = 0                  # from the repo's own Dockerfile EXPOSE; 0 = not stated
 
 
 def join(path, name):
@@ -65,7 +66,7 @@ def services(scan):
         entries = [e for e in (x.get("entrypoints") or []) if isinstance(e, str)]
         entry = _pick(entries, PY_ENTRY_ORDER if kind == "python" else NODE_ENTRY_ORDER if kind == "node" else ())
         out.append(Svc(path=path, kind=kind, entrypoint=entry, frameworks=frameworks, env_vars=env,
-                       has_tests=bool(x.get("has_tests")), has_dockerfile=bool(x.get("has_dockerfile")), lockfile=lock, slug=_slug(path)))
+                       has_tests=bool(x.get("has_tests")), has_dockerfile=bool(x.get("has_dockerfile")), lockfile=lock, slug=_slug(path), port=int(x.get("port") or 0)))
     if len(out) > MAX_SERVICES:
         skipped += [(s.path, f"more than {MAX_SERVICES} services: only the first {MAX_SERVICES} get files") for s in out[MAX_SERVICES:]]
         out = out[:MAX_SERVICES]

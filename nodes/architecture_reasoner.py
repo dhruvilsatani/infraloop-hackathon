@@ -16,6 +16,7 @@ OMNIROUTE_API_KEY = os.getenv("LLM_API_KEY") or os.getenv("OMNIROUTE_API_KEY", "
 OMNIROUTE_API_MODEL = os.getenv("LLM_MODEL") or os.getenv("OMNIROUTE_API_MODEL", "Dhruvil-1")
 
 LAST_REMOVED = []        # sentences removed from the AI-written parts by the last report (see claim_check)
+LAST_AI_POLISH_ERROR = None   # short reason the last report fell back to the code-written version, or None if AI polish ran (or was off)
 JUDGMENT_RULES_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "..", "knowledge", "judgment_rules.md"
 )
@@ -1065,8 +1066,10 @@ def _offline_skeleton(scan_result, questionnaire_answers):
 def reason_about_architecture(scan_result, questionnaire_answers, gaps=None):
     """Always builds the full report in code first (the 'base'). Unless offline mode is on, an AI model then rewrites
     sections 1, 3 and 5 and adds a short summary; every AI sentence is checked against the base (see polish.py)."""
+    global LAST_AI_POLISH_ERROR
     base = _assemble(scan_result, questionnaire_answers, gaps, offline=True)
     if offline_mode():
+        LAST_AI_POLISH_ERROR = None
         return base
     try:
         from nodes import polish
@@ -1076,9 +1079,11 @@ def reason_about_architecture(scan_result, questionnaire_answers, gaps=None):
                                         _call_omniroute, sys.modules[__name__])
         global LAST_REMOVED
         LAST_REMOVED = removed
+        LAST_AI_POLISH_ERROR = None
         print("[" + claim_check.summary(removed) + "]")
         return report
     except Exception as exc:            # model down, rate-limited or unreadable answer: the code-written report is complete on its own
+        LAST_AI_POLISH_ERROR = str(exc)[:300]
         print(f"[ai-polish] skipped, using the code-written report: {exc}")
         return base
 
