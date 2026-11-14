@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import re
 import secrets
 import shutil
 import time
@@ -213,13 +214,62 @@ def submit_answers(req: AnswerRequest):
 
     if state.get("report"):
         ai_error = None if (req.mode == "offline") else architecture_reasoner.LAST_AI_POLISH_ERROR
-        return {"status": "done", "report": state["report"], "ai_polish_error": ai_error}
+        return {"status": "done", "report": state["report"], "ai_polish_error": ai_error,
+                "ai_written": req.mode != "offline" and not ai_error,
+                "gaps": report_gaps(state["report"]), "budget": _budget_for(session)}
 
     session["followup_rounds"] = session.get("followup_rounds", 0) + 1
     followups = state.get("followup_questions_needed", [])
     session.setdefault("asked", []).extend({"question": q} for q in followups if isinstance(q, str))
     _save_session(req.session_id, session)
     return {"status": "need_more_info", "questions": followups}
+
+
+def report_gaps(report):
+    """The gap table of the finished report as a list, so a page can show the same rows the report has (never a second, different list).
+    Each item: name, severity (Critical/High/Medium/Low), group, source, evidence (list of lines)."""
+    from nodes import report_cleanup as rc
+    try:
+        lines = report.split("\n")
+        loc = rc._find_gap_table(lines)
+        if not loc:
+            return []
+        a, b = loc
+        low = [h.lower() for h in rc._cells(lines[a])]
+        def col(*starts):
+            return next((k for k, h in enumerate(low) if h.startswith(starts)), None)
+        gap_i, sev_i, grp_i, src_i, risk_i = col("gap", "issue", "finding"), col("severity"), col("group"), col("source"), col("risk")
+        if gap_i is None or sev_i is None:
+            return []
+        out = []
+        for ln in lines[a + 1:b]:
+            cells = rc._cells(ln)
+            if len(cells) <= max(gap_i, sev_i) or all(re.fullmatch(r":?-{2,}:?", c) for c in cells if c):
+                continue
+            sev = cells[sev_i].strip().strip("*").capitalize()
+            if sev not in ("Critical", "High", "Medium", "Low"):
+                continue
+            pick = lambda i: cells[i].strip().strip("*") if i is not None and i < len(cells) else ""
+            out.append({"name": pick(gap_i), "severity": sev, "group": pick(grp_i), "source": pick(src_i),
+                        "evidence": [pick(risk_i)] if pick(risk_i) else []})
+        return out
+    except Exception as exc:          # the list must never break the report
+        print(f"[gaps] not listed: {exc}")
+        return []
+
+
+def _budget_for(session):
+    """The monthly budget the user gave (EUR) and whether the recommended setup fits it; monthly_eur is None when no usable budget was given."""
+    from nodes import architecture_reasoner as ar
+    try:
+        scan, answers = session["scan_result"], session.get("answers", {})
+        _, cost_data = ar._cost_for(scan, answers)
+        plan = ar._plan_for(scan, answers, cost_data) if cost_data else None
+        if plan and plan.get("budget") is not None:
+            return {"monthly_eur": plan["budget"], "status": plan.get("status")}
+    except Exception as exc:
+        print(f"[budget] not available: {exc}")
+    return {"monthly_eur": None, "status": None}
 
 
 class GenerateRequest(BaseModel):

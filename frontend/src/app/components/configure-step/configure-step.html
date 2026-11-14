@@ -44,6 +44,9 @@
           <p class="mono muted">Your choice</p>
           <h2 class="selection-title">{{ sel.short }}</h2>
           <p class="muted small">{{ sel.note }}</p>
+          @if (sel.catch) {
+            <p class="small"><span class="mono muted">The catch:</span> {{ sel.catch }}</p>
+          }
 
           <div class="selection-cost">
             <p class="mono muted">Estimated cost</p>
@@ -71,14 +74,16 @@
             </ul>
           }
 
-          <p class="budget-line small">
-            <span class="sample-tag">sample budget</span>
-            @if (data.isWithinBudget(sel.monthly_eur)) {
-              <span class="ok">Within your € {{ data.budget }} budget.</span>
-            } @else if (sel.monthly_eur !== null) {
-              <span class="over">Over your € {{ data.budget }} budget.</span>
-            }
-          </p>
+          @if (data.budget() !== null && sel.monthly_eur !== null) {
+            <p class="budget-line small">
+              @if (data.mock) { <span class="sample-tag">sample budget</span> }
+              @if (data.isWithinBudget(sel.monthly_eur)) {
+                <span class="ok">Within your € {{ data.budget() }} budget.</span>
+              } @else {
+                <span class="over">Over your € {{ data.budget() }} budget.</span>
+              }
+            </p>
+          }
 
           <button type="button" class="btn btn-primary btn-block" (click)="preview()">Preview files</button>
           <a routerLink="/report" class="link center">Back to report</a>

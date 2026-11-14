@@ -57,3 +57,12 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+
+## Backend address
+
+The dev server forwards API calls (`/scan`, `/answer`, `/targets`, `/preview`, `/upload`, `/generate`) to the FastAPI backend at `http://127.0.0.1:8000` (see `proxy.conf.js`).
+If your backend runs on another port, say so when you start the frontend:
+
+```bash
+BACKEND_URL=http://127.0.0.1:8001 npm start
+```

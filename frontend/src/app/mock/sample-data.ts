@@ -1,17 +1,6 @@
-// SAMPLE DATA. These two values are not returned by the backend yet. Replace them when it does;
-// the pages read them through ReportDataService and do not need to change.
-//
-// Still missing from the API (for the backend developer):
-//   1. The gap list: name, severity and evidence for each gap. Only advice titles and skip reasons are returned today.
-//   2. The budget comparison: the budget the user gave and whether the recommended setup fits it.
-
-export type Severity = 'High' | 'Medium' | 'Low';
-
-export interface GapItem {
-  name: string;
-  severity: Severity;
-  evidence: string[];
-}
+// SAMPLE DATA, used only when USE_MOCK_DATA (config.ts) is true, and for the example card on the landing page.
+// The real gap list and budget come from the backend (POST /answer).
+import { GapItem } from '../models';
 
 export const BUDGET_MONTHLY = 150;
 

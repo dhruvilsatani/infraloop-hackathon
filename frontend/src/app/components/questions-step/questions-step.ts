@@ -70,7 +70,7 @@ export class QuestionsStepComponent {
       if (res.status === 'need_more_info') {
         this.wizard.setQuestions(res.questions.map(normalizeQuestion));
       } else {
-        this.wizard.showReport(res.report);
+        this.wizard.showReport(res.report, res);
         await this.router.navigate(['/report']);
       }
     } catch (e) {

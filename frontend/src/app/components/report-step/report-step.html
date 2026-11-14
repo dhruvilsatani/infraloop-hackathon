@@ -24,8 +24,8 @@
 
   <div class="summary">
     <div>
-      <p class="mono muted">Gaps found <span class="sample-tag">sample</span></p>
-      <p class="summary-value">{{ data.gaps.length }}</p>
+      <p class="mono muted">Gaps found @if (data.mock) { <span class="sample-tag">sample</span> }</p>
+      <p class="summary-value">{{ wizard.isExample() ? '—' : data.gaps().length }}</p>
     </div>
     <div>
       <p class="mono muted">Recommended setup</p>
@@ -43,16 +43,19 @@
     </div>
   </div>
 
+  @if (!wizard.isExample()) {
   <section class="report-section">
-    <p class="eyebrow">01 &middot; Gaps <span class="sample-tag">sample data</span></p>
+    <p class="eyebrow">01 &middot; Gaps @if (data.mock) { <span class="sample-tag">sample data</span> }</p>
     <h2 class="section-title-sm">Gaps found in your repo</h2>
-    <p class="muted small">The gap list is not returned by the service yet. These rows are sample data.</p>
+    @if (!data.gaps().length) {
+      <p class="muted">No gaps are listed for this repository. The full written report below has the details.</p>
+    } @else {
     <table class="gap-table">
       <thead>
         <tr><th>Gap</th><th>Evidence from your files</th><th>Severity</th></tr>
       </thead>
       <tbody>
-        @for (gap of data.gaps; track gap.name) {
+        @for (gap of data.gaps(); track gap.name) {
           <tr>
             <td class="gap-name">{{ gap.name }}</td>
             <td>
@@ -65,7 +68,9 @@
         }
       </tbody>
     </table>
+    }
   </section>
+  }
 
   <section class="report-section">
     <p class="eyebrow">02 &middot; Setup</p>
@@ -73,6 +78,12 @@
     @if (data.recommended(); as rec) {
       <p class="setup-name">{{ rec.label }}</p>
       <p class="muted">{{ rec.note }}</p>
+      @if (rec.why.length) {
+        <p class="mono muted">Why this one</p>
+        <ul class="plain-list">
+          @for (w of rec.why; track w) { <li>{{ w }}</li> }
+        </ul>
+      }
       @if (rec.benefits.length) {
         <p class="mono muted">What it gives you</p>
         <ul class="plain-list">
@@ -111,15 +122,21 @@
         <p class="muted small">{{ rec.price_note }}</p>
       }
     }
-    <p class="budget-line">
-      <span class="sample-tag">sample budget</span>
-      Your budget is € {{ data.budget }} per month.
-      @if (data.isWithinBudget(data.recommended()?.monthly_eur)) {
-        <span class="ok">Within it.</span>
-      } @else if (data.recommended()?.monthly_eur != null) {
-        <span class="over">Over it.</span>
-      }
-    </p>
+    @if (!wizard.isExample()) {
+      <p class="budget-line">
+        @if (data.mock) { <span class="sample-tag">sample budget</span> }
+        @if (data.budget() !== null) {
+          Your budget is € {{ data.budget() }} per month.
+          @if (data.isWithinBudget(data.recommended()?.monthly_eur)) {
+            <span class="ok">Within it.</span>
+          } @else if (data.recommended()?.monthly_eur != null) {
+            <span class="over">Over it.</span>
+          }
+        } @else {
+          You gave no budget, so the cost is not compared with one.
+        }
+      </p>
+    }
   </section>
 
   <section class="report-section">
@@ -160,5 +177,12 @@
     <button type="button" class="link" (click)="newScan()">New scan</button>
   </div>
 
-  <p class="fine">Cost figures are estimates from list prices at the time of the scan. Parts of the report are written by an AI model; check the evidence before you act on a finding.</p>
+  <p class="fine">
+    Cost figures are estimates from list prices at the time of the scan.
+    @if (wizard.aiWritten()) {
+      Parts of the report are written by an AI model; check the evidence before you act on a finding.
+    } @else {
+      This report was written by fixed rules from the scan, without an AI model.
+    }
+  </p>
 </div>

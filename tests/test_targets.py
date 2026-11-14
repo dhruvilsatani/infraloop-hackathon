@@ -660,5 +660,32 @@ class Api(unittest.TestCase):
         self.assertEqual(self.client.post("/generate", json={"session_id": "nope-nope-nope", "target": "not-yet"}).status_code, 404)
 
 
+    def test_answer_returns_the_reports_own_gap_rows_the_budget_and_whether_ai_wrote_it(self):
+        budget_q = "What's your monthly infrastructure budget?"
+        from nodes import questionnaire
+        asked = questionnaire.build_questions(api.SESSIONS[self.sid]["scan_result"], api.SESSIONS[self.sid]["gaps"]) if hasattr(questionnaire, "build_questions") else []
+        budget_q = next((q["question"] for q in asked if isinstance(q, dict) and "budget" in q["question"].lower()), budget_q)
+        api.SESSIONS[self.sid]["asked"] = [{"question": budget_q}]
+        r = self.client.post("/answer", json={"session_id": self.sid, "answers": {budget_q: "200"}, "mode": "offline"})
+        self.assertEqual(r.status_code, 200)
+        d = r.json()
+        self.assertEqual(d["status"], "done")
+        self.assertFalse(d["ai_written"])
+        self.assertIsNone(d["ai_polish_error"])
+        self.assertEqual(d["gaps"], api.report_gaps(d["report"]))
+        for g in d["gaps"]:
+            self.assertIn(g["name"], d["report"])
+            self.assertIn(g["severity"], ("Critical", "High", "Medium", "Low"))
+        self.assertIn("monthly_eur", d["budget"])
+        self.assertEqual(d["budget"], {"monthly_eur": 200, "status": "fits"})
+
+    def test_report_gaps_reads_the_table_and_ignores_a_report_without_one(self):
+        rep = ("## 2. Gaps\n\n| # | Gap | Group | Severity | Source | Risk and evidence |\n|---|---|---|---|---|---|\n"
+               "| 1 | No CI | Recommended | High | Checked in your repo by the scan | no workflow file |\n\n## 3. Next\n")
+        self.assertEqual(api.report_gaps(rep), [{"name": "No CI", "severity": "High", "group": "Recommended",
+                                                 "source": "Checked in your repo by the scan", "evidence": ["no workflow file"]}])
+        self.assertEqual(api.report_gaps("# nothing here"), [])
+
+
 if __name__ == "__main__":
     unittest.main()

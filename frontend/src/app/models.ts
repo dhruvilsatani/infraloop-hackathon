@@ -17,8 +17,25 @@ export interface ScanResponse {
   questions: (Question | string)[];
 }
 
+export type Severity = 'Critical' | 'High' | 'Medium' | 'Low';
+
+// One row of the report's gap table, from POST /answer. The backend reads it from the finished report, so both always match.
+export interface GapItem {
+  name: string;
+  severity: Severity;
+  evidence: string[];
+  group?: string;
+  source?: string;
+}
+
+// The monthly budget the user gave; monthly_eur is null when no usable budget was given.
+export interface Budget {
+  monthly_eur: number | null;
+  status: string | null;
+}
+
 export type AnswerResponse =
-  | { status: 'done'; report: string }
+  | { status: 'done'; report: string; gaps?: GapItem[]; budget?: Budget; ai_written?: boolean; ai_polish_error?: string | null }
   | { status: 'need_more_info'; questions: (Question | string)[] };
 
 export interface UploadFile {
