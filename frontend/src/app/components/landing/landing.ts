@@ -1,6 +1,5 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ProfileService } from '../../core/profile.service';
 import { ReportDataService } from '../../core/report-data.service';
 import { WizardService } from '../../core/wizard.service';
 import { USE_MOCK_DATA } from '../../config';
@@ -12,7 +11,6 @@ import { USE_MOCK_DATA } from '../../config';
 })
 export class LandingComponent {
   protected readonly data = inject(ReportDataService);
-  protected readonly profile = inject(ProfileService);
   protected readonly wizard = inject(WizardService);
   protected readonly mock = USE_MOCK_DATA;
 
@@ -24,6 +22,9 @@ export class LandingComponent {
   ];
 
   protected readonly flow = ['Your repository', 'Scan', 'Short summary', 'AI model'];
+
+  // Illustration only: the preview card on this page is an example, not your report.
+  protected readonly exampleSetup = 'Managed containers with a managed database';
 
   protected openExample(e: Event): void {
     e.preventDefault();

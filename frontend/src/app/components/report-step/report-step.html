@@ -3,7 +3,7 @@
 
   <div class="report-head">
     <div>
-      <h1 class="serif page-title">Production readiness report</h1>
+      <h1 class="page-title">Production readiness report</h1>
       <p class="lead">
         @if (wizard.isExample()) {
           Example report for a real public project: Google's Online Boutique demo (12 services, Kubernetes, Terraform).
@@ -18,27 +18,35 @@
     </div>
   </div>
 
+  @if (loadError()) {
+    <div class="error-box" role="alert">{{ loadError() }}</div>
+  }
+
   <div class="summary">
     <div>
-      <p class="mono muted">Gaps found</p>
-      <p class="serif summary-value">{{ data.gaps.length }}</p>
+      <p class="mono muted">Gaps found <span class="sample-tag">sample</span></p>
+      <p class="summary-value">{{ data.gaps.length }}</p>
     </div>
     <div>
       <p class="mono muted">Recommended setup</p>
-      <p class="summary-text">{{ data.setup.name }}</p>
+      <p class="summary-text">{{ data.recommended()?.short ?? '—' }}</p>
     </div>
     <div>
       <p class="mono muted">Monthly cost</p>
-      <p class="serif summary-value">€ {{ data.recommendedTotal() }}</p>
+      <p class="summary-value">
+        @if (data.recommended()?.monthly_eur != null) {
+          € {{ data.recommended()!.monthly_eur }} <span class="per-month">per month</span>
+        } @else {
+          —
+        }
+      </p>
     </div>
   </div>
-  @if (mock) {
-    <p class="sample-note">Gaps, setup and cost in this section are sample data until the report returns them.</p>
-  }
 
   <section class="report-section">
-    <p class="eyebrow">01 &middot; Gaps</p>
-    <h2 class="serif section-title-sm">Gaps found in your repo</h2>
+    <p class="eyebrow">01 &middot; Gaps <span class="sample-tag">sample data</span></p>
+    <h2 class="section-title-sm">Gaps found in your repo</h2>
+    <p class="muted small">The gap list is not returned by the service yet. These rows are sample data.</p>
     <table class="gap-table">
       <thead>
         <tr><th>Gap</th><th>Evidence from your files</th><th>Severity</th></tr>
@@ -61,23 +69,81 @@
 
   <section class="report-section">
     <p class="eyebrow">02 &middot; Setup</p>
-    <h2 class="serif section-title-sm">Recommended setup</h2>
-    <p class="setup-name">{{ data.setup.name }}</p>
-    <p class="muted">{{ data.setup.summary }}</p>
-    <p class="mono muted">Alternatives you did not pick</p>
-    <ul class="alt-list">
-      @for (alt of data.setup.alternatives; track alt) {
-        <li>{{ alt }}</li>
+    <h2 class="section-title-sm">Recommended setup</h2>
+    @if (data.recommended(); as rec) {
+      <p class="setup-name">{{ rec.label }}</p>
+      <p class="muted">{{ rec.note }}</p>
+      @if (rec.benefits.length) {
+        <p class="mono muted">What it gives you</p>
+        <ul class="plain-list">
+          @for (b of rec.benefits; track b) { <li>{{ b }}</li> }
+        </ul>
       }
-    </ul>
+      @if (rec.drawbacks.length) {
+        <p class="mono muted">What you give up</p>
+        <ul class="plain-list">
+          @for (d of rec.drawbacks; track d) { <li>{{ d }}</li> }
+        </ul>
+      }
+      @if (data.alternatives().length) {
+        <p class="mono muted">Alternatives you did not pick</p>
+        <ul class="alt-list">
+          @for (alt of data.alternatives(); track alt.id) {
+            <li>{{ alt.short }}: <span class="mono">€ {{ alt.monthly_eur }}/mo</span></li>
+          }
+        </ul>
+      }
+    } @else if (!loadError()) {
+      <p class="muted">Loading your setup&hellip;</p>
+    }
   </section>
 
   <section class="report-section">
     <p class="eyebrow">03 &middot; Cost</p>
-    <h2 class="serif section-title-sm">Monthly cost</h2>
-    <p class="serif summary-value">€ {{ data.recommendedTotal() }} <span class="per-month">per month</span></p>
-    <p class="muted">Calculated from list prices for the recommended setup. Your budget: € {{ data.budget }} per month.</p>
+    <h2 class="section-title-sm">Monthly cost</h2>
+    @if (data.recommended(); as rec) {
+      @if (rec.monthly_eur !== null) {
+        <p class="summary-value">€ {{ rec.monthly_eur }} <span class="per-month">per month, excl. VAT</span></p>
+      } @else {
+        <p class="muted">This setup is not priced in the report.</p>
+      }
+      @if (rec.price_note) {
+        <p class="muted small">{{ rec.price_note }}</p>
+      }
+    }
+    <p class="budget-line">
+      <span class="sample-tag">sample budget</span>
+      Your budget is € {{ data.budget }} per month.
+      @if (data.isWithinBudget(data.recommended()?.monthly_eur)) {
+        <span class="ok">Within it.</span>
+      } @else if (data.recommended()?.monthly_eur != null) {
+        <span class="over">Over it.</span>
+      }
+    </p>
   </section>
+
+  <section class="report-section">
+    <p class="eyebrow">04 &middot; Fixes</p>
+    <h2 class="section-title-sm">Fixes to apply by hand</h2>
+    @if (advice().length) {
+      <ul class="plain-list">
+        @for (a of advice(); track a.gap) { <li>{{ a.title }}</li> }
+      </ul>
+      <p class="muted small">InfraLoop does not change your existing files. The steps for each fix are in MANIFEST.md on the Files page.</p>
+    } @else {
+      <p class="muted">No fixes needed for files your repository already has.</p>
+    }
+  </section>
+
+  @if (skipped().length) {
+    <section class="report-section">
+      <p class="eyebrow">05 &middot; Not covered</p>
+      <h2 class="section-title-sm">Gaps without generated files</h2>
+      <ul class="plain-list">
+        @for (s of skipped(); track s.gap) { <li><span class="mono">{{ s.gap }}</span>: {{ s.reason }}</li> }
+      </ul>
+    </section>
+  }
 
   <section class="report-section">
     <p class="eyebrow">Full written report</p>
@@ -86,17 +152,13 @@
 
   <div class="action-row report-actions">
     <button type="button" class="link" (click)="back()">&larr; {{ wizard.isExample() ? 'Back' : 'Back to questions' }}</button>
-    <button type="button" class="btn btn-primary btn-lg" (click)="continue()">Configure your infrastructure &rarr;</button>
+    @if (wizard.isExample()) {
+      <span class="muted small">Start a scan to see your own setup and files.</span>
+    } @else {
+      <button type="button" class="btn btn-primary btn-lg" (click)="continue()">Choose where it runs &rarr;</button>
+    }
     <button type="button" class="link" (click)="newScan()">New scan</button>
   </div>
 
-  <div class="cta-band">
-    <div>
-      <p class="serif cta-title">Want this for your repo?</p>
-      <p>Have the infrastructure reviewed or built.</p>
-    </div>
-    <button type="button" class="btn btn-light" (click)="profile.show()">Get in touch</button>
-  </div>
-
-  <p class="fine">Cost figures are estimates from list prices at the time of the scan. Parts of the report are written by an AI model; check the evidence column before you act on a finding.</p>
+  <p class="fine">Cost figures are estimates from list prices at the time of the scan. Parts of the report are written by an AI model; check the evidence before you act on a finding.</p>
 </div>

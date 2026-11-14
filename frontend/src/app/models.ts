@@ -43,6 +43,64 @@ export interface PickedFolder {
   tooMany: boolean;
 }
 
+// "Where will it run?" option, from POST /targets.
+export interface TargetLink {
+  label: string;
+  url: string;
+}
+
+export interface Target {
+  id: string;
+  label: string;
+  provider: string;
+  monthly_eur: number | null;
+  zone_ha: boolean | null;
+  recommended: boolean;
+  files: boolean;
+  note: string;
+  price_note?: string;
+  profile: string;
+  catch: string;
+  drawbacks: string[];
+  benefits: string[];
+  links: TargetLink[];
+  short: string;
+  why: string[];
+  brief: string;
+}
+
+export interface TargetsResponse {
+  targets: Target[];
+}
+
+// Files and guides, from POST /preview.
+export interface DocFile {
+  path: string;
+  title: string;
+  content: string;
+}
+
+export interface PreviewFile extends DocFile {
+  group: 'basic' | 'cloud';
+}
+
+export interface AdviceItem {
+  gap: string;
+  title: string;
+}
+
+export interface SkippedItem {
+  gap: string;
+  reason: string;
+}
+
+export interface PreviewResponse {
+  docs: DocFile[];
+  files: PreviewFile[];
+  advice: AdviceItem[];
+  skipped: SkippedItem[];
+}
+
 export function normalizeQuestion(q: Question | string): Question {
   return typeof q === 'string' ? { id: q, question: q, kind: 'text' } : q;
 }

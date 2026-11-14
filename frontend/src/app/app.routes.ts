@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { hasReport, hasSession } from './core/guards';
+import { hasLiveSession, hasReport, hasSession } from './core/guards';
 import { LandingComponent } from './components/landing/landing';
 import { ScanStepComponent } from './components/scan-step/scan-step';
 import { QuestionsStepComponent } from './components/questions-step/questions-step';
@@ -12,7 +12,7 @@ export const routes: Routes = [
   { path: 'scan', component: ScanStepComponent, title: 'Analyze a repository · InfraLoop' },
   { path: 'answer', component: QuestionsStepComponent, canActivate: [hasSession], title: 'Answer · InfraLoop' },
   { path: 'report', component: ReportStepComponent, canActivate: [hasReport], title: 'Report · InfraLoop' },
-  { path: 'configure', component: ConfigureStepComponent, canActivate: [hasReport], title: 'Configure · InfraLoop' },
-  { path: 'files', component: FilesStepComponent, canActivate: [hasReport], title: 'Files · InfraLoop' },
+  { path: 'configure', component: ConfigureStepComponent, canActivate: [hasLiveSession], title: 'Configure · InfraLoop' },
+  { path: 'files', component: FilesStepComponent, canActivate: [hasLiveSession], title: 'Files · InfraLoop' },
   { path: '**', redirectTo: '' },
 ];

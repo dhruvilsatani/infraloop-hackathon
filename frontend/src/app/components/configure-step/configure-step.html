@@ -1,63 +1,91 @@
 <div class="wizard-page container">
   <app-stepper [current]="4" />
 
-  <h1 class="serif page-title">Configure your infrastructure</h1>
-  <p class="lead">Recommended options are preselected from your report. Change anything you like.</p>
-  @if (mock) {
-    <p class="sample-note">Options, prices and the budget are sample data until the backend returns them.</p>
+  <h1 class="page-title">Where will it run?</h1>
+  <p class="lead">Pick the setup the report recommends, or another option. Each one comes with its own starter files.</p>
+
+  @if (loadError()) {
+    <div class="error-box" role="alert">{{ loadError() }}</div>
+  } @else if (loading()) {
+    <div class="loading" role="status"><div class="spinner"></div><div class="muted">Loading the options&hellip;</div></div>
   }
 
-  <div class="configure">
-    <div class="groups">
-      @for (group of data.configGroups; track group.title) {
-        <section class="group">
-          <div class="group-head">
-            <h2 class="group-title">{{ group.title }}</h2>
-            @if (group.fromSetup) {
-              <span class="mono muted">From your recommended setup</span>
-            } @else if (group.gap) {
-              <span class="gap-tag sev-bg-{{ group.gap.toLowerCase() }}">{{ group.gap }} gap</span>
+  @if (!loading() && !loadError()) {
+    <div class="configure">
+      <fieldset class="options">
+        <legend class="sr-only">Hosting options</legend>
+        @for (t of wizard.targets(); track t.id) {
+          <label class="option" [class.on]="wizard.selectedTargetId() === t.id">
+            <input type="radio" name="target" [checked]="wizard.selectedTargetId() === t.id" (change)="select(t.id)" />
+            <span class="option-text">
+              <span class="option-title">
+                {{ t.short }}
+                @if (t.recommended) { <span class="pill pill-green">Recommended</span> }
+              </span>
+              <span class="muted">{{ t.label }}</span>
+              <span class="option-meta mono muted">
+                {{ filesLabel(t) }}
+                @if (t.zone_ha === true) { · Survives a zone outage }
+              </span>
+            </span>
+            <span class="option-cost">
+              @if (t.monthly_eur !== null) {
+                <span class="serif">€ {{ t.monthly_eur }}</span><span class="mono muted"> /mo</span>
+              } @else {
+                <span class="mono muted">No price</span>
+              }
+            </span>
+          </label>
+        }
+      </fieldset>
+
+      @if (data.selected(); as sel) {
+        <aside class="selection card">
+          <p class="mono muted">Your choice</p>
+          <h2 class="selection-title">{{ sel.short }}</h2>
+          <p class="muted small">{{ sel.note }}</p>
+
+          <div class="selection-cost">
+            <p class="mono muted">Estimated cost</p>
+            @if (sel.monthly_eur !== null) {
+              <p class="summary-value">€ {{ sel.monthly_eur }} <span class="per-month">/ month</span></p>
+              @if (sel.price_note) {
+                <p class="muted small">{{ sel.price_note }}</p>
+              }
+            } @else {
+              <p class="muted">Not priced in the report.</p>
             }
           </div>
-          @for (o of group.options; track o.id) {
-            <label class="option" [class.on]="isOn(o.id)">
-              <input type="checkbox" [checked]="isOn(o.id)" (change)="toggle(o.id)" />
-              <span class="option-text">
-                <span class="option-title">{{ o.label }}
-                  @if (o.recommended) { <span class="pill pill-green">Recommended</span> }
-                </span>
-                <span class="muted">{{ o.description }}</span>
-              </span>
-              <span class="option-cost mono">+ € {{ o.cost }}/mo</span>
-            </label>
+
+          @if (sel.drawbacks.length) {
+            <p class="mono muted selection-sub">What you give up</p>
+            <ul class="plain-list small">
+              @for (d of sel.drawbacks; track d) { <li>{{ d }}</li> }
+            </ul>
           }
-        </section>
+
+          @if (sel.links.length) {
+            <p class="mono muted selection-sub">Read more</p>
+            <ul class="plain-list small">
+              @for (l of sel.links; track l.url) { <li><a [href]="l.url" target="_blank" rel="noopener noreferrer">{{ l.label }}</a></li> }
+            </ul>
+          }
+
+          <p class="budget-line small">
+            <span class="sample-tag">sample budget</span>
+            @if (data.isWithinBudget(sel.monthly_eur)) {
+              <span class="ok">Within your € {{ data.budget }} budget.</span>
+            } @else if (sel.monthly_eur !== null) {
+              <span class="over">Over your € {{ data.budget }} budget.</span>
+            }
+          </p>
+
+          <button type="button" class="btn btn-primary btn-block" (click)="preview()">Preview files</button>
+          <a routerLink="/report" class="link center">Back to report</a>
+        </aside>
       }
     </div>
-
-    <aside class="selection card">
-      <h2 class="side-title">Your selection</h2>
-      <ul class="selection-list">
-        @for (o of data.selectedOptions(); track o.id) {
-          <li>{{ o.label }}</li>
-        } @empty {
-          <li class="muted">Nothing selected</li>
-        }
-      </ul>
-      <div class="selection-cost">
-        <p class="mono muted">Estimated cost</p>
-        <p class="serif summary-value">€ {{ data.monthlyTotal() }} <span class="per-month">/ month</span></p>
-        <p class="muted">Calculated in code from list prices.</p>
-        @if (withinBudget()) {
-          <p class="ok">&#10003; Within your budget</p>
-        } @else {
-          <p class="over">Over your budget by € {{ data.monthlyTotal() - data.budget }}</p>
-        }
-      </div>
-      <button type="button" class="btn btn-primary btn-block" (click)="preview()">Preview files</button>
-      <a routerLink="/report" class="link center">Back to report</a>
-    </aside>
-  </div>
+  }
 
   <p class="fine">Nothing is written to your repo or cloud. You review every file before downloading.</p>
 </div>

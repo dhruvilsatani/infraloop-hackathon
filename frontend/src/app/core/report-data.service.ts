@@ -1,44 +1,25 @@
-import { Injectable, computed, signal } from '@angular/core';
-import {
-  BASE_MONTHLY_COST,
-  BUDGET_MONTHLY,
-  CONFIG_GROUPS,
-  ConfigGroup,
-  DEFAULT_SELECTION,
-  GAPS,
-  GapItem,
-  GeneratedFile,
-  SETUP,
-  SetupInfo,
-  generateFiles,
-} from '../mock/sample-data';
+import { Injectable, computed, inject } from '@angular/core';
+import { BUDGET_MONTHLY, GAPS, GapItem } from '../mock/sample-data';
+import { Target } from '../models';
+import { WizardService } from './wizard.service';
 
-// Single entry point for the report, configure and files pages.
-// Sample values come from mock/sample-data.ts until the backend returns them.
+// Maps backend results to what the pages show. The gap table and the budget are still sample data (see mock/sample-data.ts).
 @Injectable({ providedIn: 'root' })
 export class ReportDataService {
+  private readonly wizard = inject(WizardService);
+
   readonly gaps: GapItem[] = GAPS;
-  readonly setup: SetupInfo = SETUP;
-  readonly configGroups: ConfigGroup[] = CONFIG_GROUPS;
-  readonly baseCost = BASE_MONTHLY_COST;
   readonly budget = BUDGET_MONTHLY;
+  readonly recommended = this.wizard.recommendedTarget;
+  readonly selected = this.wizard.selectedTarget;
+  readonly targets = this.wizard.targets;
 
-  private readonly allOptions = CONFIG_GROUPS.flatMap((g) => g.options);
-  readonly selected = signal<Set<string>>(new Set(DEFAULT_SELECTION));
-
-  readonly selectedOptions = computed(() => this.allOptions.filter((o) => this.selected().has(o.id)));
-  readonly monthlyTotal = computed(() => this.baseCost + this.selectedOptions().reduce((n, o) => n + o.cost, 0));
-  readonly recommendedTotal = computed(
-    () => this.baseCost + this.allOptions.filter((o) => o.recommended).reduce((n, o) => n + o.cost, 0),
+  // Priced options the user did not pick, shown as "alternatives you did not pick".
+  readonly alternatives = computed<Target[]>(() =>
+    this.wizard.targets().filter((t) => !t.recommended && t.monthly_eur !== null),
   );
-  readonly files = computed<GeneratedFile[]>(() => generateFiles(this.selected()));
 
-  toggle(id: string): void {
-    this.selected.update((s) => {
-      const next = new Set(s);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  isWithinBudget(cost: number | null | undefined): boolean {
+    return cost !== null && cost !== undefined && cost <= this.budget;
   }
 }

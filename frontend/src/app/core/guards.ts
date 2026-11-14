@@ -8,3 +8,7 @@ export const hasSession: CanActivateFn = () =>
 
 export const hasReport: CanActivateFn = () =>
   inject(WizardService).reportMarkdown() ? true : inject(Router).parseUrl('/scan');
+
+// Configure and Files need a real scan on the server; the example report has none.
+export const hasLiveSession: CanActivateFn = () =>
+  inject(WizardService).hasLiveSession() ? true : inject(Router).parseUrl('/scan');

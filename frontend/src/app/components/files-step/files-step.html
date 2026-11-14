@@ -1,64 +1,71 @@
 <div class="wizard-page container">
   <app-stepper [current]="5" />
 
-  <h1 class="serif page-title">Review your files</h1>
-  <p class="lead">Click a file to inspect it. Edit anything before you download.</p>
-  @if (mock) {
-    <p class="sample-note">File list and contents are sample output until the backend generates real files.</p>
-  }
+  <h1 class="page-title">Review your files</h1>
+  <p class="lead">Untick anything you do not want. Click a file to inspect it, and edit anything before you download.</p>
 
-  <div class="files-layout">
-    <aside class="file-tree" aria-label="Files">
-      <div class="tree-head"><span class="mono">Files</span><span class="mono muted">{{ files().length }}</span></div>
-      @for (group of groups(); track group.folder) {
-        @if (group.folder) {
-          <div class="folder">{{ group.folder }}</div>
-        }
-        @for (f of group.files; track f.path) {
-          <button type="button" class="tree-file" [class.active]="active() === f.path" [class.nested]="!!group.folder" (click)="openFile(f.path)">
-            <span class="file-name">{{ basename(f.path) }}</span>
-            @if (isEdited(f.path)) {
-              <span class="edited-dot" aria-label="Edited"></span>
-            }
-          </button>
-        }
-      }
-      <div class="tree-foot"><span class="edited-dot"></span> Edited</div>
-    </aside>
-
-    <section class="editor" aria-label="Code">
-      <div class="editor-tabs" role="tablist">
-        @for (path of openTabs(); track path) {
-          <button type="button" role="tab" class="tab" [class.active]="active() === path" [attr.aria-selected]="active() === path" (click)="active.set(path)">
-            {{ basename(path) }}
-          </button>
-        }
-      </div>
-      <div class="code-body">
-        <div class="gutter" aria-hidden="true">
-          @for (n of lines(); track n) {
-            <div>{{ n }}</div>
+  @if (loadError()) {
+    <div class="error-box" role="alert">{{ loadError() }}</div>
+  } @else if (loading()) {
+    <div class="loading" role="status"><div class="spinner"></div><div class="muted">Preparing your files&hellip;</div></div>
+  } @else {
+    <div class="files-layout">
+      <aside class="file-tree" aria-label="Files">
+        <div class="tree-head"><span class="mono">Files</span><span class="mono muted">{{ includedCount() }} of {{ items().length }}</span></div>
+        @for (group of groups(); track group.folder) {
+          <div class="folder">{{ group.folder || 'Repository root' }}</div>
+          @for (item of group.items; track item.path) {
+            <div class="tree-row" [class.nested]="group.folder !== ''" [class.active]="active() === item.path">
+              <input type="checkbox" class="tree-check" [checked]="isIncluded(item.path)" (change)="toggleIncluded(item.path)"
+                     [attr.aria-label]="'Include ' + basename(item.path)" />
+              <button type="button" class="tree-file" (click)="openFile(item.path)">
+                <span class="file-name">{{ basename(item.path) }}</span>
+                @if (item.kind === 'cloud') { <span class="kind-tag">hosting</span> }
+                @if (isEdited(item.path)) { <span class="edited-dot" aria-label="Edited"></span> }
+              </button>
+            </div>
           }
-        </div>
-        <textarea class="code-input" spellcheck="false" wrap="off" aria-label="File contents"
-                  [rows]="lines().length" [value]="activeContent()" (input)="onEdit($event)"></textarea>
-      </div>
-      <div class="editor-foot">
-        <span class="muted">Generated from your recommended setup</span>
-        <span class="editor-actions">
-          <button type="button" class="link-light" (click)="resetActive()">Reset file</button>
-          <button type="button" class="link-light" (click)="copyActive()">Copy</button>
-        </span>
-      </div>
-    </section>
-  </div>
+        }
+        <div class="tree-foot"><span class="edited-dot"></span> Edited</div>
+      </aside>
 
-  <div class="action-row files-actions">
-    <a routerLink="/configure" class="link">Back to configuration</a>
-    <span class="grow"></span>
-    <button type="button" class="btn btn-outline" (click)="downloadActive()">Download this file</button>
-    <button type="button" class="btn btn-primary" (click)="downloadAll()">Download all as .zip</button>
-  </div>
+      @if (activeItem(); as item) {
+        <section class="editor" aria-label="Code">
+          <div class="editor-tabs" role="tablist">
+            @for (path of openTabs(); track path) {
+              <button type="button" role="tab" class="tab" [class.active]="active() === path" [attr.aria-selected]="active() === path" (click)="active.set(path)">
+                {{ basename(path) }}
+              </button>
+            }
+          </div>
+          <p class="editor-title small muted">{{ item.title }}</p>
+          <div class="code-body">
+            <div class="gutter" aria-hidden="true">
+              @for (n of lines(); track n) {
+                <div>{{ n }}</div>
+              }
+            </div>
+            <textarea class="code-input" spellcheck="false" wrap="off" aria-label="File contents"
+                      [rows]="lines().length" [value]="activeContent()" (input)="onEdit($event)"></textarea>
+          </div>
+          <div class="editor-foot">
+            <span class="muted">Generated from your repository scan</span>
+            <span class="editor-actions">
+              <button type="button" class="link-light" (click)="resetActive()">Reset file</button>
+              <button type="button" class="link-light" (click)="copyActive()">Copy</button>
+            </span>
+          </div>
+        </section>
+      }
+    </div>
+
+    <div class="action-row files-actions">
+      <a routerLink="/configure" class="link">Back to configuration</a>
+      <span class="grow"></span>
+      <button type="button" class="btn btn-outline" (click)="downloadActive()">Download this file</button>
+      <button type="button" class="btn btn-primary" [disabled]="includedCount() === 0" (click)="downloadAll()">Download {{ includedCount() }} as .zip</button>
+    </div>
+  }
 
   <p class="fine">Generated files are suggestions. Check each one before you use it. InfraLoop never deploys anything and never connects to your cloud.</p>
 </div>

@@ -1,12 +1,12 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { ProfileService } from '../../core/profile.service';
 import { ReportDataService } from '../../core/report-data.service';
 import { WizardService } from '../../core/wizard.service';
-import { USE_MOCK_DATA } from '../../config';
+import { errorMessage } from '../../core/api.service';
+import { AdviceItem, SkippedItem } from '../../models';
 import { StepperComponent } from '../stepper/stepper';
 
 @Component({
@@ -14,13 +14,15 @@ import { StepperComponent } from '../stepper/stepper';
   imports: [StepperComponent],
   templateUrl: './report-step.html',
 })
-export class ReportStepComponent {
+export class ReportStepComponent implements OnInit {
   protected readonly wizard = inject(WizardService);
   protected readonly data = inject(ReportDataService);
-  protected readonly profile = inject(ProfileService);
   private readonly router = inject(Router);
   private readonly sanitizer = inject(DomSanitizer);
-  protected readonly mock = USE_MOCK_DATA;
+
+  protected readonly advice = signal<AdviceItem[]>([]);
+  protected readonly skipped = signal<SkippedItem[]>([]);
+  protected readonly loadError = signal('');
 
   protected readonly html = computed<SafeHtml>(() => {
     const md = this.wizard.reportMarkdown();
@@ -28,6 +30,18 @@ export class ReportStepComponent {
     const raw = marked.parse(md, { async: false }) as string;
     return this.sanitizer.bypassSecurityTrustHtml(DOMPurify.sanitize(raw));
   });
+
+  async ngOnInit(): Promise<void> {
+    if (this.wizard.isExample()) return;
+    try {
+      await this.wizard.loadTargets();
+      const basic = await this.wizard.loadPreview('');
+      this.advice.set(basic.advice);
+      this.skipped.set(basic.skipped);
+    } catch (e) {
+      this.loadError.set(errorMessage(e, 'Could not load the results of this scan.'));
+    }
+  }
 
   protected back(): void {
     this.router.navigate([this.wizard.isExample() ? '/scan' : '/answer']);

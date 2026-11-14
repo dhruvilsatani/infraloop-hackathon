@@ -27,7 +27,7 @@
     </div>
     <div class="preview-section">
       <p class="mono muted">Recommended setup</p>
-      <p class="preview-setup">{{ data.setup.name }}</p>
+      <p class="preview-setup">{{ exampleSetup }}</p>
     </div>
     <div class="preview-foot">
       <span class="mono muted">Monthly cost</span>
@@ -88,13 +88,11 @@
   <p class="eyebrow eyebrow-amber">Coming next &middot; expected December 2026</p>
   <h2 class="serif section-title">After the report: an agent that sees outages coming.</h2>
   <p class="lead">Reads live metrics, events and the dependency graph of your Kubernetes cluster.</p>
-  <button type="button" class="btn btn-outline btn-lg" (click)="profile.show()">Get in touch</button>
 </section>
 
 <footer class="site-footer">
   <div class="container footer-row">
     <span>InfraLoop &middot; Report only, never connects to your cloud</span>
-    <span>Built by Dhruvil Satani</span>
   </div>
   <div class="container footer-fine">
     Cost figures are estimates from list prices at the time of the scan. Parts of the report are written by an AI model; check the evidence before you act on a finding.
