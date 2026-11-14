@@ -111,9 +111,18 @@ def build_targets(scan, plan=None, gaps=None):
         t["profile"] = choices.profile_id(t["id"], plat)
         t["catch"] = choices.catch(t["profile"])
         t["drawbacks"] = list(choices.PROFILES[t["profile"]]["give_up"])
+        if (plan or {}).get("uptime") == "zero" and t["id"] in (HETZNER, AWS, AZURE):
+            warn = "You asked for no downtime. One server does NOT meet that: it is down while it restarts or if its zone fails."
+            t["drawbacks"].insert(0, warn)
+            t["note"] = warn + " " + t["note"]
+            t["recommended"] = False
         t["benefits"] = _benefits(t, cheapest)
         t["links"] = [{"label": n, "url": u} for n, u in choices.PROFILES[t["profile"]].get("links", [])]
         t["short"] = {HETZNER: "one Hetzner server", AWS: "one AWS server", AZURE: "one Azure server"}.get(t["id"]) or t["label"].split(",")[0].split(" (")[0].strip()
+    if not any(t["recommended"] for t in out):
+        first_plan = next((t for t in out if t["id"].startswith("plan-")), None)
+        if first_plan:
+            first_plan["recommended"] = True
     for t in out:
         t["why"] = _why(t, plan) if t["recommended"] else []
         t["brief"] = choices.brief_markdown(t, scan, gaps, SERVER_FILES.get(t["id"]))

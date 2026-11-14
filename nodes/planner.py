@@ -289,6 +289,14 @@ def facts_lines(plan):
     return out
 
 
+def _zone_cell(o, notes=()):
+    """'yes' only when everything survives. A datastore kept at one copy is a single point of failure, and a managed Redis note fixes only Redis."""
+    if not o["zone_ha"]:
+        return "no"
+    single = [n for n in (o.get("stateful_kept_single") or []) if "redis" not in n.lower() or not any("Redis" in x for x in notes)]
+    return f"yes, except {', '.join(single)} (one copy)" if single else "yes"
+
+
 def decision_section(plan):
     """Markdown block appended to the report in code, so the figures are right whatever the model wrote."""
     lines = describe(plan)
@@ -299,11 +307,11 @@ def decision_section(plan):
     ss = plan.get("small_server")
     if ss:
         rows.append(f"| **Recommended (small load):** one Hetzner {ss['name']} server, excl. VAT | **{ss['total']:.2f}** | no |")
-        rows.append(f"| Managed platform: {o['label']}" + (" + " + " + ".join(plan["notes"]) if plan["notes"] else "") + f" | {plan['total']:.2f} | {'yes' if o['zone_ha'] else 'no'} |")
+        rows.append(f"| Managed platform: {o['label']}" + (" + " + " + ".join(plan["notes"]) if plan["notes"] else "") + f" | {plan['total']:.2f} | {_zone_cell(o, plan['notes'])} |")
     else:
-        rows.append(f"| **Recommended:** {o['label']}" + (" + " + " + ".join(plan["notes"]) if plan["notes"] else "") + f" | **{plan['total']:.2f}** | {'yes' if o['zone_ha'] else 'no'} |")
+        rows.append(f"| **Recommended:** {o['label']}" + (" + " + " + ".join(plan["notes"]) if plan["notes"] else "") + f" | **{plan['total']:.2f}** | {_zone_cell(o, plan['notes'])} |")
     for a in plan["alternatives"]:
-        rows.append(f"| {a['label']}" + (" + " + " + ".join(a["notes"]) if a["notes"] else "") + f" | {a['total']:.2f} | {'yes' if a['zone_ha'] else 'no'} |")
+        rows.append(f"| {a['label']}" + (" + " + " + ".join(a["notes"]) if a["notes"] else "") + f" | {a['total']:.2f} | {_zone_cell(a, a['notes'])} |")
     return ("## 4. Estimated Monthly Cost (computed in code)\n\n" + "\n".join(f"- {x}" for x in lines) + "\n\n" + "\n".join(rows)
             + "\n\n_Not included: egress, NAT, monitoring, persistent disks beyond boot disks, LLM tokens, and any database you run yourself._")
 

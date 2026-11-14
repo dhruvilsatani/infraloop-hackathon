@@ -295,7 +295,17 @@ def _hidden_or_tooling(rel_dir):
             or "snippet" in p.lower() for p in parts)
 
 
+def _exposed_port(path):
+    """First port from an EXPOSE line of a Dockerfile (0 when there is none or it is a variable)."""
+    for line in _read_head(path, 20000).splitlines():
+        m = re.match(r"\s*EXPOSE\s+(\d{2,5})", line, re.I)
+        if m and 0 < int(m.group(1)) < 65536:
+            return int(m.group(1))
+    return 0
+
+
 def detect_runtime_picture(repo_path):
+    docker_port_by_dir = {}
     dockerfiles, test_dirs_files = [], set()
     language_counts = {}
     language_counts_nontest = {}
@@ -338,6 +348,7 @@ def detect_runtime_picture(repo_path):
                 else:
                     dockerfiles.append(rel)
                     dockerfile_dirs.add(rel_root)
+                    docker_port_by_dir.setdefault(rel_root, _exposed_port(full))
             if f in ("vercel.json", "netlify.toml", "fly.toml", "render.yaml", "Procfile", "serverless.yml",
                      "serverless.yaml", "wrangler.toml", "app.yaml", "railway.json", "firebase.json"):
                 deploy_config_dirs.add(rel_root)
@@ -487,7 +498,8 @@ def detect_runtime_picture(repo_path):
         key = "." if c == "." else service_of[c]
         svc = services.setdefault(key, {"path": key, "languages": set(), "dockerfiles": 0,
                                         "manifests": 0, "entrypoints": [], "has_tests": False,
-                                        "deploy_config": False})
+                                        "deploy_config": False, "port": 0})
+        svc["port"] = svc["port"] or docker_port_by_dir.get(c, 0)
         svc["languages"] |= manifests_by_dir.get(c, set())
         svc["dockerfiles"] += 1 if c in dockerfile_dirs else 0
         svc["manifests"] += 1 if c in manifests_by_dir else 0

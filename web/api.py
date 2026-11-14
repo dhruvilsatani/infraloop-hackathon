@@ -212,7 +212,8 @@ def submit_answers(req: AnswerRequest):
         architecture_reasoner.set_mode("")
 
     if state.get("report"):
-        return {"status": "done", "report": state["report"]}
+        ai_error = None if (req.mode == "offline") else architecture_reasoner.LAST_AI_POLISH_ERROR
+        return {"status": "done", "report": state["report"], "ai_polish_error": ai_error}
 
     session["followup_rounds"] = session.get("followup_rounds", 0) + 1
     followups = state.get("followup_questions_needed", [])
