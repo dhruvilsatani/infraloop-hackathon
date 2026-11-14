@@ -1,20 +1,26 @@
 import { Component, computed, inject } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { Router } from '@angular/router';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { ProfileService } from '../../core/profile.service';
+import { ReportDataService } from '../../core/report-data.service';
 import { WizardService } from '../../core/wizard.service';
-import { SHOWCASE } from '../../config';
+import { USE_MOCK_DATA } from '../../config';
+import { StepperComponent } from '../stepper/stepper';
 
 @Component({
   selector: 'app-report-step',
+  imports: [StepperComponent],
   templateUrl: './report-step.html',
 })
 export class ReportStepComponent {
   protected readonly wizard = inject(WizardService);
+  protected readonly data = inject(ReportDataService);
   protected readonly profile = inject(ProfileService);
+  private readonly router = inject(Router);
   private readonly sanitizer = inject(DomSanitizer);
-  protected readonly showcase = SHOWCASE;
+  protected readonly mock = USE_MOCK_DATA;
 
   protected readonly html = computed<SafeHtml>(() => {
     const md = this.wizard.reportMarkdown();
@@ -24,11 +30,15 @@ export class ReportStepComponent {
   });
 
   protected back(): void {
-    this.wizard.backFromReport();
+    this.router.navigate([this.wizard.isExample() ? '/scan' : '/answer']);
+  }
+
+  protected continue(): void {
+    this.router.navigate(['/configure']);
   }
 
   protected newScan(): void {
-    window.location.reload();
+    this.wizard.startNewScan();
   }
 
   protected downloadMd(): void {
@@ -39,10 +49,13 @@ export class ReportStepComponent {
     this.download('json');
   }
 
-  // Example reports are not downloadable, matching the original page.
+  protected severityClass(severity: string): string {
+    return 'sev sev-' + severity.toLowerCase();
+  }
+
   private download(kind: 'md' | 'json'): void {
     const md = this.wizard.reportMarkdown();
-    if (!md || this.wizard.isExample()) return;
+    if (!md) return;
     const day = new Date().toISOString().slice(0, 10);
     const body =
       kind === 'json'

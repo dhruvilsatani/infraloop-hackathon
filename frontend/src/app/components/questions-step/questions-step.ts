@@ -1,17 +1,20 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ApiService, errorMessage } from '../../core/api.service';
 import { WizardService } from '../../core/wizard.service';
 import { normalizeQuestion, Question } from '../../models';
+import { StepperComponent } from '../stepper/stepper';
 
 @Component({
   selector: 'app-questions-step',
-  imports: [FormsModule],
+  imports: [FormsModule, StepperComponent],
   templateUrl: './questions-step.html',
 })
 export class QuestionsStepComponent {
   protected readonly wizard = inject(WizardService);
   private readonly api = inject(ApiService);
+  private readonly router = inject(Router);
 
   protected offline = false;
   protected readonly busy = signal(false);
@@ -56,7 +59,7 @@ export class QuestionsStepComponent {
     if (missing.length && !this.warned) {
       this.warned = true;
       this.error.set(
-        `Not answered: ${missing.join(', ')}. Without these the report stays generic (no budget check, no database advice). Press Generate Report again to continue anyway.`,
+        `Not answered: ${missing.join(', ')}. Without these the report stays generic (no budget check, no database advice). Press Generate report again to continue anyway.`,
       );
       return;
     }
@@ -68,6 +71,7 @@ export class QuestionsStepComponent {
         this.wizard.setQuestions(res.questions.map(normalizeQuestion));
       } else {
         this.wizard.showReport(res.report);
+        await this.router.navigate(['/report']);
       }
     } catch (e) {
       this.error.set(errorMessage(e, 'Report generation failed'));

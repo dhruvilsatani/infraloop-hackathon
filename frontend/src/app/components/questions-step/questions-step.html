@@ -1,34 +1,47 @@
-<div class="card">
-  <h2>A few quick questions</h2>
-  <p class="hint">These shape the recommendation: scale, budget and constraints a scan cannot see.</p>
-  @for (q of wizard.questions(); track q.id) {
-    <div class="q" [class.hidden]="!isVisible(q)">
-      <label><span>{{ q.question }}@if (q.optional) { <em class="optional-tag">(optional)</em> }</span>
-        @if (q.kind === 'choice') {
-          <div class="choices">
-            @for (o of q.options ?? []; track o) {
-              <button type="button" class="choice" [class.selected]="answer(q) === o" (click)="wizard.setAnswer(q.question, o)">{{ o }}</button>
+<div class="wizard-page container">
+  <app-stepper [current]="2" />
+
+  <section class="narrow">
+    <h1 class="serif page-title">A few quick questions</h1>
+    <p class="lead">These shape the recommendation: scale, budget and constraints a scan cannot see.</p>
+
+    <div class="card form-card">
+      @for (q of wizard.questions(); track q.id) {
+        <div class="q" [class.hidden]="!isVisible(q)">
+          <label class="field">
+            <span class="field-label">{{ q.question }}@if (q.optional) { <span class="muted"> (optional)</span> }</span>
+            @if (q.kind === 'choice') {
+              <span class="choices">
+                @for (o of q.options ?? []; track o) {
+                  <button type="button" class="choice" [class.selected]="answer(q) === o" (click)="wizard.setAnswer(q.question, o)">{{ o }}</button>
+                }
+              </span>
+            } @else {
+              <input class="input" type="text" [value]="answer(q)" (input)="onText(q, $event)" />
             }
-          </div>
-        } @else {
-          <input type="text" [value]="answer(q)" (input)="onText(q, $event)" />
-        }
+          </label>
+        </div>
+      }
+
+      <label class="offline-toggle">
+        <input type="checkbox" [(ngModel)]="offline" />
+        <span><strong>Quick report without AI</strong> &mdash; written by fixed rules from the scan. Instant, nothing is sent to a model, but shorter and no AI observations.</span>
       </label>
+
+      <div class="action-row">
+        <button type="button" class="btn btn-primary btn-lg" [disabled]="busy()" (click)="submit()">Generate report</button>
+        <a routerLink="/scan" class="link">&larr; Back</a>
+      </div>
+
+      @if (busy()) {
+        <div class="loading" role="status">
+          <div class="spinner"></div>
+          <div class="muted">Writing your report&hellip; this can take a minute or two.</div>
+        </div>
+      }
+      @if (error()) {
+        <div class="error-box" role="alert">{{ error() }}</div>
+      }
     </div>
-  }
-  <label class="offline-toggle">
-    <input type="checkbox" [(ngModel)]="offline" />
-    <span><strong>Quick report without AI</strong> &mdash; written by fixed rules from the scan. Instant, nothing is sent to a model, but shorter and no AI observations.</span>
-  </label>
-  <button type="button" [disabled]="busy()" (click)="submit()">Generate report</button>
-  <button type="button" class="secondary" (click)="wizard.goTo('scan')">&larr; Back</button>
-  @if (busy()) {
-    <div class="loading" role="status">
-      <div class="spinner"></div>
-      <div class="loading-status">Writing your report&hellip; this can take a minute or two.</div>
-    </div>
-  }
-  @if (error()) {
-    <div class="error-box" role="alert">{{ error() }}</div>
-  }
+  </section>
 </div>

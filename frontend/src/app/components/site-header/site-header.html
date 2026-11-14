@@ -1,0 +1,24 @@
+<header class="site-header">
+  <div class="container nav">
+    <a routerLink="/" class="brand" aria-label="InfraLoop home">
+      <svg viewBox="0 0 48 48" width="28" height="28" aria-hidden="true">
+        <path d="M24 6a18 18 0 1 0 17.2 12.7" stroke="currentColor" stroke-width="4" stroke-linecap="round" fill="none"/>
+        <circle cx="38" cy="10" r="3.5" fill="currentColor"/>
+      </svg>
+      <span>InfraLoop</span>
+    </a>
+    <nav class="nav-links" aria-label="Main">
+      @if (onLanding()) {
+        <a routerLink="/" fragment="how">How it works</a>
+      }
+      <a href="#" (click)="openExample($event)">Example report</a>
+      <a routerLink="/" fragment="roadmap">Roadmap</a>
+      <button type="button" class="link-btn" (click)="profile.show()">About</button>
+    </nav>
+    @if (onLanding()) {
+      <a class="btn btn-primary" routerLink="/scan">Get my report</a>
+    } @else {
+      <a class="btn btn-outline" routerLink="/scan" (click)="newScan($event)">New scan</a>
+    }
+  </div>
+</header>

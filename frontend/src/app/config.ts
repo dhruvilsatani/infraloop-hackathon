@@ -13,4 +13,6 @@ export const PROFILE = {
   linkedin: '',
 };
 
-export const SHOWCASE: boolean = (window as unknown as { SHOWCASE?: boolean }).SHOWCASE === true;
+// true = gaps, cost, setup, configure options and generated files come from mock/sample-data.ts.
+// The report body is always the real markdown from the backend.
+export const USE_MOCK_DATA = true;

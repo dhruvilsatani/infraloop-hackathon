@@ -1,14 +1,14 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { ApiService } from './api.service';
 import { Question } from '../models';
 
-export type Step = 'scan' | 'questions' | 'report';
-
+// Holds the data that flows through the pages. The current page is the router URL, not a state here.
 @Injectable({ providedIn: 'root' })
 export class WizardService {
   private readonly api = inject(ApiService);
+  private readonly router = inject(Router);
 
-  readonly step = signal<Step>('scan');
   readonly sessionId = signal('');
   readonly questions = signal<Question[]>([]);
   readonly answers = signal<Record<string, string>>({});
@@ -19,7 +19,6 @@ export class WizardService {
     this.sessionId.set(sessionId);
     this.questions.set(questions);
     this.answers.set({});
-    this.step.set('questions');
   }
 
   setQuestions(questions: Question[]): void {
@@ -33,26 +32,21 @@ export class WizardService {
   showReport(markdown: string): void {
     this.reportMarkdown.set(markdown);
     this.isExample.set(false);
-    this.step.set('report');
   }
 
-  async showExample(): Promise<void> {
+  async openExample(): Promise<void> {
     const text = await this.api.example();
     this.reportMarkdown.set(text);
     this.isExample.set(true);
-    this.step.set('report');
+    await this.router.navigate(['/report']);
   }
 
-  backFromReport(): void {
-    if (this.isExample()) {
-      this.isExample.set(false);
-      this.step.set('scan');
-    } else {
-      this.step.set('questions');
-    }
-  }
-
-  goTo(step: Step): void {
-    this.step.set(step);
+  startNewScan(): void {
+    this.sessionId.set('');
+    this.questions.set([]);
+    this.answers.set({});
+    this.reportMarkdown.set('');
+    this.isExample.set(false);
+    this.router.navigate(['/scan']);
   }
 }

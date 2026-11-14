@@ -1,0 +1,63 @@
+<div class="wizard-page container">
+  <app-stepper [current]="4" />
+
+  <h1 class="serif page-title">Configure your infrastructure</h1>
+  <p class="lead">Recommended options are preselected from your report. Change anything you like.</p>
+  @if (mock) {
+    <p class="sample-note">Options, prices and the budget are sample data until the backend returns them.</p>
+  }
+
+  <div class="configure">
+    <div class="groups">
+      @for (group of data.configGroups; track group.title) {
+        <section class="group">
+          <div class="group-head">
+            <h2 class="group-title">{{ group.title }}</h2>
+            @if (group.fromSetup) {
+              <span class="mono muted">From your recommended setup</span>
+            } @else if (group.gap) {
+              <span class="gap-tag sev-bg-{{ group.gap.toLowerCase() }}">{{ group.gap }} gap</span>
+            }
+          </div>
+          @for (o of group.options; track o.id) {
+            <label class="option" [class.on]="isOn(o.id)">
+              <input type="checkbox" [checked]="isOn(o.id)" (change)="toggle(o.id)" />
+              <span class="option-text">
+                <span class="option-title">{{ o.label }}
+                  @if (o.recommended) { <span class="pill pill-green">Recommended</span> }
+                </span>
+                <span class="muted">{{ o.description }}</span>
+              </span>
+              <span class="option-cost mono">+ € {{ o.cost }}/mo</span>
+            </label>
+          }
+        </section>
+      }
+    </div>
+
+    <aside class="selection card">
+      <h2 class="side-title">Your selection</h2>
+      <ul class="selection-list">
+        @for (o of data.selectedOptions(); track o.id) {
+          <li>{{ o.label }}</li>
+        } @empty {
+          <li class="muted">Nothing selected</li>
+        }
+      </ul>
+      <div class="selection-cost">
+        <p class="mono muted">Estimated cost</p>
+        <p class="serif summary-value">€ {{ data.monthlyTotal() }} <span class="per-month">/ month</span></p>
+        <p class="muted">Calculated in code from list prices.</p>
+        @if (withinBudget()) {
+          <p class="ok">&#10003; Within your budget</p>
+        } @else {
+          <p class="over">Over your budget by € {{ data.monthlyTotal() - data.budget }}</p>
+        }
+      </div>
+      <button type="button" class="btn btn-primary btn-block" (click)="preview()">Preview files</button>
+      <a routerLink="/report" class="link center">Back to report</a>
+    </aside>
+  </div>
+
+  <p class="fine">Nothing is written to your repo or cloud. You review every file before downloading.</p>
+</div>

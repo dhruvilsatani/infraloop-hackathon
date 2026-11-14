@@ -9,6 +9,8 @@ const apiRoute = {
   // /answer can hold the connection for 1-2+ minutes while the LLM writes the report
   proxyTimeout: 600000,
   timeout: 600000,
+  // A browser page load (Accept: text/html) of /scan or /answer is an app page, not an API call.
+  bypass: (req) => ((req.headers.accept || '').includes('text/html') ? '/index.html' : undefined),
 };
 
 module.exports = {

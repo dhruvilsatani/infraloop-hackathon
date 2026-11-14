@@ -1,17 +1,102 @@
-<div class="card wide">
-  <h2>Production readiness report</h2>
-  @if (wizard.isExample()) {
-    <div class="example-banner">Example report. InfraLoop produced this for a real public project (Google&rsquo;s Online Boutique demo: 12 services, Kubernetes, Terraform), with the answers shown in the report. Nothing here is made up for the demo.</div>
+<div class="wizard-page container">
+  <app-stepper [current]="3" />
+
+  <div class="report-head">
+    <div>
+      <h1 class="serif page-title">Production readiness report</h1>
+      <p class="lead">
+        @if (wizard.isExample()) {
+          Example report for a real public project: Google's Online Boutique demo (12 services, Kubernetes, Terraform).
+        } @else {
+          Your report, written from the scan and your answers.
+        }
+      </p>
+    </div>
+    <div class="head-actions">
+      <button type="button" class="btn btn-outline" (click)="downloadMd()">Download .md</button>
+      <button type="button" class="btn btn-outline" (click)="downloadJson()">Download .json</button>
+    </div>
+  </div>
+
+  <div class="summary">
+    <div>
+      <p class="mono muted">Gaps found</p>
+      <p class="serif summary-value">{{ data.gaps.length }}</p>
+    </div>
+    <div>
+      <p class="mono muted">Recommended setup</p>
+      <p class="summary-text">{{ data.setup.name }}</p>
+    </div>
+    <div>
+      <p class="mono muted">Monthly cost</p>
+      <p class="serif summary-value">€ {{ data.recommendedTotal() }}</p>
+    </div>
+  </div>
+  @if (mock) {
+    <p class="sample-note">Gaps, setup and cost in this section are sample data until the report returns them.</p>
   }
-  <div class="report-body" [innerHTML]="html()"></div>
-  @if (!showcase) {
-    <button type="button" class="secondary" (click)="back()">{{ wizard.isExample() ? '← Back' : '← Back to questions' }}</button>
-  }
-  <button type="button" class="secondary" (click)="downloadMd()">Download .md</button>
-  <button type="button" class="secondary" (click)="downloadJson()">Download .json</button>
-  @if (!showcase) {
-    <button type="button" (click)="newScan()">New scan</button>
-  } @else {
-    <button type="button" class="secondary" (click)="profile.show()">Want this for your repo? Get in touch</button>
-  }
+
+  <section class="report-section">
+    <p class="eyebrow">01 &middot; Gaps</p>
+    <h2 class="serif section-title-sm">Gaps found in your repo</h2>
+    <table class="gap-table">
+      <thead>
+        <tr><th>Gap</th><th>Evidence from your files</th><th>Severity</th></tr>
+      </thead>
+      <tbody>
+        @for (gap of data.gaps; track gap.name) {
+          <tr>
+            <td class="gap-name">{{ gap.name }}</td>
+            <td>
+              @for (line of gap.evidence; track line) {
+                <div class="muted">{{ line }}</div>
+              }
+            </td>
+            <td><span [class]="severityClass(gap.severity)">{{ gap.severity }}</span></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </section>
+
+  <section class="report-section">
+    <p class="eyebrow">02 &middot; Setup</p>
+    <h2 class="serif section-title-sm">Recommended setup</h2>
+    <p class="setup-name">{{ data.setup.name }}</p>
+    <p class="muted">{{ data.setup.summary }}</p>
+    <p class="mono muted">Alternatives you did not pick</p>
+    <ul class="alt-list">
+      @for (alt of data.setup.alternatives; track alt) {
+        <li>{{ alt }}</li>
+      }
+    </ul>
+  </section>
+
+  <section class="report-section">
+    <p class="eyebrow">03 &middot; Cost</p>
+    <h2 class="serif section-title-sm">Monthly cost</h2>
+    <p class="serif summary-value">€ {{ data.recommendedTotal() }} <span class="per-month">per month</span></p>
+    <p class="muted">Calculated from list prices for the recommended setup. Your budget: € {{ data.budget }} per month.</p>
+  </section>
+
+  <section class="report-section">
+    <p class="eyebrow">Full written report</p>
+    <div class="report-body" [innerHTML]="html()"></div>
+  </section>
+
+  <div class="action-row report-actions">
+    <button type="button" class="link" (click)="back()">&larr; {{ wizard.isExample() ? 'Back' : 'Back to questions' }}</button>
+    <button type="button" class="btn btn-primary btn-lg" (click)="continue()">Configure your infrastructure &rarr;</button>
+    <button type="button" class="link" (click)="newScan()">New scan</button>
+  </div>
+
+  <div class="cta-band">
+    <div>
+      <p class="serif cta-title">Want this for your repo?</p>
+      <p>Have the infrastructure reviewed or built.</p>
+    </div>
+    <button type="button" class="btn btn-light" (click)="profile.show()">Get in touch</button>
+  </div>
+
+  <p class="fine">Cost figures are estimates from list prices at the time of the scan. Parts of the report are written by an AI model; check the evidence column before you act on a finding.</p>
 </div>
