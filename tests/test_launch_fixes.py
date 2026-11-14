@@ -92,7 +92,7 @@ class Round3(unittest.TestCase):
         opts, meta = plan_options(scan)
         self.assertEqual(meta["fee_autopilot"], 0.0)
         self.assertGreater(meta["fee_regional"], 60)
-        self.assertEqual({o["platform"] for o in opts}, {"gke_autopilot", "cloud_run"})
+        self.assertEqual({o["platform"] for o in opts}, {"gke_autopilot", "cloud_run", "aws_fargate", "azure_container_apps"})
         two = next(o for o in opts if o["platform"] == "gke_autopilot" and o["replicas"] == 2)
         self.assertTrue(two["zone_ha"])
 

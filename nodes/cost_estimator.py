@@ -4,7 +4,7 @@ REQUESTS found in the repo's Kubernetes manifests."""
 import re
 from knowledge.prices import (
     PRICES_USD as P, HOURS_PER_MONTH, SECONDS_PER_MONTH, USD_PER_EUR, USD_PER_EUR_DATE,
-    RETRIEVED, HETZNER_SERVERS, HETZNER_NOTE, NOT_PRICED, PRICES_EUR_AZURE as AZ,
+    RETRIEVED, RETRIEVED_PLATFORMS, HETZNER_SERVERS, HETZNER_NOTE, HETZNER_LOAD_BALANCERS, NOT_PRICED, PRICES_EUR_AZURE as AZ,
 )
 
 ASSUMED_SIZE = {"cpu_cores": 0.25, "memory_gib": 0.5, "replicas": 1}   # used only when the repo states no sizes
@@ -33,6 +33,28 @@ def _cloud_run_always_on(w):
 def _fargate(w):
     per_hour = w["cpu_cores"] * _p("fargate_x86_vcpu_hour") + w["memory_gib"] * _p("fargate_x86_gb_hour")
     return per_hour * HOURS_PER_MONTH * w["replicas"]
+
+
+def _container_apps(w):
+    """Azure Container Apps, Consumption plan, West Europe, at the ACTIVE rate for every second of the month. Azure bills a lower rate while a
+    replica is idle and gives a monthly free grant; neither is subtracted here, so the real bill can be lower."""
+    per_second = w["cpu_cores"] * _p("container_apps_vcpu_second_active") + w["memory_gib"] * _p("container_apps_gib_second_active")
+    return per_second * SECONDS_PER_MONTH * w["replicas"]
+
+
+def _aws_load_balancer_eur():
+    """One Application Load Balancer: the fixed hourly fee plus the public IPv4 address it holds in each of two zones.
+    The per-use part (LCU) depends on traffic and is NOT included."""
+    return _eur((_p("alb_per_hour") + 2 * _p("aws_public_ipv4_per_hour")) * HOURS_PER_MONTH)
+
+
+def _aws_task_address_eur(tasks):
+    """Each Fargate task in a public subnet holds one public IPv4 address, and AWS charges for it."""
+    return _eur(tasks * _p("aws_public_ipv4_per_hour") * HOURS_PER_MONTH)
+
+
+PLATFORM_FN = {"gke_autopilot": _autopilot, "cloud_run": _cloud_run_always_on, "aws_fargate": _fargate, "azure_container_apps": _container_apps}
+DB_GIB = {"gcp": 10, "aws": 20, "azure": 32}   # the disk each managed database is priced with: a stated assumption, shown in the report
 
 
 def _norm(name):
@@ -190,17 +212,34 @@ def plan_options(scan_result, workloads=None):
         stateless = len(kept) - len(stateful)
         base = {"set": set_key, "removed": sorted(removed), "services": len(kept), "stateless_services": stateless,
                 "stateful_kept_single": sorted(stateful), "service_names": sorted(kept)}
-        for plat, label, fn, r, fixed, zone in (
-                ("gke_autopilot", "GKE Autopilot", _autopilot, 1, fee_autopilot, False),
-                ("gke_autopilot", "GKE Autopilot", _autopilot, 2, fee_autopilot, True),
-                ("cloud_run", "Cloud Run always-on", _cloud_run_always_on, 2, 0.0, True)):
-            total = comp(fn, r) + fixed + lb_eur
-            unit = ("instance" if r == 1 else "instances") if plat == "cloud_run" else ("replica" if r == 1 else "replicas")
-            options.append(dict(base, platform=plat, replicas=r, zone_ha=zone and r >= 2, pod_ha=r >= 2,
+        for plat, label, r, zone in (
+                ("gke_autopilot", "GKE Autopilot", 1, False),
+                ("gke_autopilot", "GKE Autopilot", 2, True),
+                ("cloud_run", "Cloud Run always-on", 2, True),
+                ("aws_fargate", "AWS ECS Fargate", 1, False),
+                ("aws_fargate", "AWS ECS Fargate", 2, True),
+                ("azure_container_apps", "Azure Container Apps", 1, False),
+                ("azure_container_apps", "Azure Container Apps", 2, True)):
+            fn = PLATFORM_FN[plat]
+            copies = len(stateful) + stateless * r            # running copies, which is what AWS charges a public address for
+            if plat == "aws_fargate":
+                fixed, tail = _aws_load_balancer_eur() + _aws_task_address_eur(copies), ", 1 Application Load Balancer"
+            elif plat == "azure_container_apps":
+                fixed, tail = 0.0, ", no separate load balancer"
+            else:
+                fixed, tail = (fee_autopilot if plat == "gke_autopilot" else 0.0) + lb_eur, ", 1 load balancer"
+            total = comp(fn, r) + fixed
+            if plat == "cloud_run":
+                unit = "instance" if r == 1 else "instances"
+            elif plat == "aws_fargate":
+                unit = "task" if r == 1 else "tasks"
+            else:
+                unit = "replica" if r == 1 else "replicas"
+            options.append(dict(base, platform=plat, replicas=r, zone_ha=zone and r >= 2, pod_ha=r >= 2, copies=copies,
                                 total=round(total, 2),
                                 label=f"{label}, {r} {unit} per service, {len(kept) - len(stateful)} service" + ("" if len(kept) - len(stateful) == 1 else "s")
                                       + (f" + {', '.join(sorted(stateful))} (in-cluster, one copy)" if stateful else "")
-                                      + (f" (without {', '.join(sorted(removed))})" if removed else "") + ", 1 load balancer"))
+                                      + (f" (without {', '.join(sorted(removed))})" if removed else "") + tail))
     stores = {d["type"] for d in (scan_result.get("in_cluster_datastores") or [])}
     redis_names = [n for n in workloads if "redis" in n.lower()]
     meta = {"lb": round(lb_eur, 2), "fee_regional": round(fee_regional, 2), "fee_autopilot": round(fee_autopilot, 2),
@@ -212,7 +251,45 @@ def plan_options(scan_result, workloads=None):
             "redis_standard": round(_eur(_p("memorystore_redis_standard_1_4gib_per_gib_hour") * HOURS_PER_MONTH), 2) if "redis" in stores and redis_names else None,
             "redis_single_autopilot": round(_eur(sum(_autopilot(dict(workloads[n], replicas=1)) for n in redis_names)), 2) if redis_names else 0.0,
             "demo": sorted(demo), "overlap": sorted(overlap)}
+    meta["addons"] = _addons(meta, workloads, redis_names, stores)
     return options, meta
+
+
+def _addons(meta, workloads, redis_names, stores):
+    """For each platform: the managed database, the secret store and the failover Redis that go with it, priced from THAT provider's own table
+    (EUR/month). Each entry also has the plain-words notes the plan prints. redis_single is what the in-cluster Redis costs on that platform, so
+    swapping it for the managed one adds only the difference. A value is None when it does not apply."""
+    has_redis = "redis" in stores and bool(redis_names)
+    def single(fn):
+        return round(_eur(sum(fn(dict(workloads[n], replicas=1)) for n in redis_names)), 2) if redis_names else 0.0
+    gcp = {"db": meta["sql"], "db_ha": meta["sql_dedicated_ha"], "secrets": meta["secret_manager"],
+           "db_note": "Cloud SQL single small shared-core instance + Secret Manager",
+           "db_ha_note": "Cloud SQL high availability, dedicated 1 vCPU / 3.75 GiB, two zones (Iowa price; EU price not read) + Secret Manager",
+           "unknown_line": f"A single small Cloud SQL instance would add {meta['sql']:.2f} EUR/month and a two-zone high-availability one {meta['sql_ha']:.2f} EUR/month (PostgreSQL rate).",
+           "redis_ha": meta["redis_standard"],
+           "redis_ha_note": "managed Redis Standard with failover instead of the in-cluster Redis (Memorystore Iowa price; EU price not read)"}
+    gib = DB_GIB["aws"]
+    aws_db = round(_eur(_p("rds_pg_db_t4g_micro_single_az_hour") * HOURS_PER_MONTH + _p("rds_pg_gp3_gb_month_single_az") * gib), 2)
+    aws_ha = round(_eur(_p("rds_pg_db_t4g_medium_multi_az_hour") * HOURS_PER_MONTH + _p("rds_pg_gp3_gb_month_multi_az") * gib), 2)
+    aws = {"db": aws_db, "db_ha": aws_ha, "secrets": round(_eur(10 * _p("aws_secrets_manager_per_secret_month")), 2),
+           "db_note": f"Amazon RDS for PostgreSQL, one small instance (db.t4g.micro, {gib} GiB, Frankfurt) + Secrets Manager",
+           "db_ha_note": f"Amazon RDS for PostgreSQL Multi-AZ (db.t4g.medium, {gib} GiB, Frankfurt) + Secrets Manager",
+           "unknown_line": f"A single small Amazon RDS database would add {aws_db:.2f} EUR/month and a Multi-AZ one {aws_ha:.2f} EUR/month (PostgreSQL rate).",
+           "redis_ha": round(_eur(2 * _p("elasticache_redis_t4g_small_node_hour") * HOURS_PER_MONTH), 2) if has_redis else None,
+           "redis_ha_note": "ElastiCache Redis with a replica (2 x cache.t4g.small, Frankfurt) instead of the in-cluster Redis"}
+    gib = DB_GIB["azure"]
+    az_db = round(_eur(_p("azure_pg_flex_b1ms_hour") * HOURS_PER_MONTH + _p("azure_pg_flex_storage_gb_month") * gib), 2)
+    az_ha = round(_eur(2 * (_p("azure_pg_flex_gp_2vcore_ddsv5_hour") * HOURS_PER_MONTH + _p("azure_pg_flex_storage_gb_month") * gib)), 2)
+    azure = {"db": az_db, "db_ha": az_ha, "secrets": round(_eur(_p("azure_key_vault_per_10k_operations")), 2),
+             "db_note": f"Azure Database for PostgreSQL, one small server (Burstable B1ms, {gib} GiB, West Europe) + Key Vault",
+             "db_ha_note": f"Azure Database for PostgreSQL with high availability (General Purpose 2 vCore, {gib} GiB, the standby is billed like the primary, West Europe) + Key Vault",
+             "unknown_line": f"A single small Azure PostgreSQL server would add {az_db:.2f} EUR/month and a high-availability one {az_ha:.2f} EUR/month (PostgreSQL rate).",
+             "redis_ha": round(AZ["azure_redis_standard_c1_1gb_per_hour"][0] * HOURS_PER_MONTH, 2) if has_redis else None,
+             "redis_ha_note": "Azure Cache for Redis Standard C1 (replicated pair, West Europe) instead of the in-cluster Redis"}
+    out = {}
+    for plat, ad in (("gke_autopilot", gcp), ("cloud_run", gcp), ("aws_fargate", aws), ("azure_container_apps", azure)):
+        out[plat] = dict(ad, redis_single=single(PLATFORM_FN[plat]))
+    return out
 
 
 def build_cost_estimate(scan_result):
@@ -228,26 +305,27 @@ def build_cost_estimate(scan_result):
         size_note += ("; the manifests ask for more than one copy of " + ", ".join(f"{n} ({r})" for n, r in sorted(stated.items()))
                       + ", but the table prices ONE copy of every workload and each total below states its own replica count")
 
-    rows, totals = [], {"cpu": 0.0, "mem": 0.0, "autopilot": 0.0, "run": 0.0, "fargate": 0.0}
+    rows, totals = [], {"cpu": 0.0, "mem": 0.0, "autopilot": 0.0, "run": 0.0, "fargate": 0.0, "aca": 0.0}
     for name, w in sorted(workloads.items()):
-        ap, run, fg = _autopilot(w), _cloud_run_always_on(w), _fargate(w)
-        rows.append((name, w, ap, run, fg))
+        ap, run, fg, aca = _autopilot(w), _cloud_run_always_on(w), _fargate(w), _container_apps(w)
+        rows.append((name, w, ap, run, fg, aca))
         totals["cpu"] += w["cpu_cores"] * w["replicas"]
         totals["mem"] += w["memory_gib"] * w["replicas"]
-        totals["autopilot"] += ap; totals["run"] += run; totals["fargate"] += fg
+        totals["autopilot"] += ap; totals["run"] += run; totals["fargate"] += fg; totals["aca"] += aca
 
     L = []
     L.append(f"### Per-service compute price (always-on, {len(workloads)} workloads)")
-    L.append(f"_Sizing: {size_note}. Prices read from the providers' pages on {RETRIEVED}; USD converted to EUR at "
-             f"{USD_PER_EUR} USD per EUR ({USD_PER_EUR_DATE} reference rate)._\n")
-    L.append("| Service | vCPU | Memory GiB | GKE Autopilot €/mo | Cloud Run (always-on) €/mo | AWS Fargate* €/mo |")
-    L.append("|---|---|---|---|---|---|")
-    for name, w, ap, run, fg in rows:
-        L.append(f"| {name} | {w['cpu_cores']:g} | {w['memory_gib']:.2f} | {_eur(ap):.2f} | {_eur(run):.2f} | {_eur(fg):.2f} |")
+    L.append(f"_Sizing: {size_note}. Google Cloud prices read from the providers' pages on {RETRIEVED}; AWS (Frankfurt) and Azure (West Europe) prices "
+             f"read from their own price lists on {RETRIEVED_PLATFORMS}; USD converted to EUR at {USD_PER_EUR} USD per EUR ({USD_PER_EUR_DATE} reference rate)._\n")
+    L.append("| Service | vCPU | Memory GiB | GKE Autopilot €/mo | Cloud Run (always-on) €/mo | AWS Fargate (Frankfurt) €/mo | Azure Container Apps (West Europe) €/mo |")
+    L.append("|---|---|---|---|---|---|---|")
+    for name, w, ap, run, fg, aca in rows:
+        L.append(f"| {name} | {w['cpu_cores']:g} | {w['memory_gib']:.2f} | {_eur(ap):.2f} | {_eur(run):.2f} | {_eur(fg):.2f} | {_eur(aca):.2f} |")
     L.append(f"| **Total** | **{totals['cpu']:.2f}** | **{totals['mem']:.2f}** | **{_eur(totals['autopilot']):.2f}** | "
-             f"**{_eur(totals['run']):.2f}** | **{_eur(totals['fargate']):.2f}** |")
-    L.append("\n*Fargate uses US East prices (no EU price was readable). Autopilot, Cloud Run and Fargate round small "
-             "requests up to their own minimum sizes, which is not modelled -- treat these as lower bounds.\n")
+             f"**{_eur(totals['run']):.2f}** | **{_eur(totals['fargate']):.2f}** | **{_eur(totals['aca']):.2f}** |")
+    L.append("\nAzure Container Apps is priced at the full ACTIVE rate for every second of the month. Azure bills a lower rate while a replica is idle and gives a "
+             "monthly free grant, and neither is subtracted here, so the real Container Apps bill can be lower. All four platforms round small requests up to "
+             "their own allowed sizes, which is not modelled.\n")
 
     # ---- fixed per-month items -----------------------------------------------------
     fee = _p("gke_cluster_fee_per_hour") * HOURS_PER_MONTH
@@ -262,6 +340,13 @@ def build_cost_estimate(scan_result):
     L.append("| AKS cluster fee, Free tier | 0.00 | no SLA; you pay only for node VMs (not priced) |")
     L.append(f"| EKS cluster fee | {_eur(_p('eks_cluster_fee_per_hour') * HOURS_PER_MONTH):.2f} | $0.10/h |")
     L.append(f"| Google HTTPS load balancer (1 forwarding rule) | {_eur(lb):.2f} | $0.025/h + $0.008/GiB processed (traffic unknown) |")
+    L.append(f"| AWS Application Load Balancer, fixed hourly part (Frankfurt) | {_eur(_p('alb_per_hour') * HOURS_PER_MONTH):.2f} | $0.027/h; the part that depends on traffic "
+             f"(${_p('alb_per_lcu_hour')} per capacity-unit hour) is not included |")
+    L.append(f"| AWS public IPv4 address, one (Frankfurt) | {_eur(_p('aws_public_ipv4_per_hour') * HOURS_PER_MONTH):.2f} | $0.005/h each; the load balancer holds one in each "
+             "of two zones, and every Fargate task in a public subnet holds one |")
+    L.append(f"| Azure Container Apps load balancer | 0.00 | the service has its own HTTPS entry point; no separate Azure load balancer is priced |")
+    L.append(f"| Hetzner load balancer LB11 (only if you run more than one Hetzner server) | {HETZNER_LOAD_BALANCERS[0][1]:.2f} | EUR excl. VAT, read {RETRIEVED_PLATFORMS}; "
+             + ", ".join(f"{n} is {v:.2f}" for n, v in HETZNER_LOAD_BALANCERS[1:]) + " |")
 
     stores = {d["type"]: d for d in (scan_result.get("in_cluster_datastores") or [])}
     optional = (scan_result.get("datastore_signals") or {}).get("only_in_optional_overlays", {})
@@ -270,6 +355,9 @@ def build_cost_estimate(scan_result):
         L.append(f"| Managed Redis, Basic 1 GiB (replaces in-cluster Redis) | {_eur(mem):.2f} | Memorystore Iowa price -- EU price not read |")
         std = _p("memorystore_redis_standard_1_4gib_per_gib_hour") * HOURS_PER_MONTH
         L.append(f"| Managed Redis, Standard 1 GiB (with failover) | {_eur(std):.2f} | Memorystore Iowa price -- EU price not read |")
+    if "redis" in stores:
+        L.append(f"| Amazon ElastiCache Redis, 2 x cache.t4g.small (primary and replica, Frankfurt) | {_eur(2 * _p('elasticache_redis_t4g_small_node_hour') * HOURS_PER_MONTH):.2f} | "
+                 f"$0.036 per node-hour |")
     if "redis" in stores:
         L.append(f"| Azure Cache for Redis Basic C1 1 GB (West Europe) | {AZ['azure_redis_basic_c1_1gb_per_hour'][0] * HOURS_PER_MONTH:.2f} | single node, no SLA; Azure announced retirement in 2028 |")
         L.append(f"| Azure Cache for Redis Standard C1 1 GB (West Europe) | {AZ['azure_redis_standard_c1_1gb_per_hour'][0] * HOURS_PER_MONTH:.2f} | replicated pair |")
@@ -287,6 +375,18 @@ def build_cost_estimate(scan_result):
              f"{_eur(_dedicated_sql_hour() * HOURS_PER_MONTH + _p('cloud_sql_ssd_gib_hour') * HOURS_PER_MONTH * 10):.2f} | Iowa rate, EU price not read |")
     L.append(f"| Same, high availability (two zones) | {_eur(2 * _dedicated_sql_hour() * HOURS_PER_MONTH + 2 * _p('cloud_sql_ssd_gib_hour') * HOURS_PER_MONTH * 10):.2f} | Iowa rate, EU price not read |")
     L.append(f"| Secret Manager, 10 secrets, light use | {_eur(max(0, 10 - 6) * _p('secret_manager_per_version_month')):.2f} | first 6 versions free |")
+    _aws_gib, _az_gib = DB_GIB["aws"], DB_GIB["azure"]
+    L.append(f"| Amazon RDS for PostgreSQL db.t4g.micro + {_aws_gib} GiB gp3, one instance (Frankfurt) | "
+             f"{_eur(_p('rds_pg_db_t4g_micro_single_az_hour') * HOURS_PER_MONTH + _p('rds_pg_gp3_gb_month_single_az') * _aws_gib):.2f} | no standby copy; {_aws_gib} GiB is an assumed disk size |")
+    L.append(f"| Amazon RDS for PostgreSQL db.t4g.medium Multi-AZ + {_aws_gib} GiB gp3 (Frankfurt) | "
+             f"{_eur(_p('rds_pg_db_t4g_medium_multi_az_hour') * HOURS_PER_MONTH + _p('rds_pg_gp3_gb_month_multi_az') * _aws_gib):.2f} | a standby copy in a second zone |")
+    L.append(f"| AWS Secrets Manager, 10 secrets, light use | {_eur(10 * _p('aws_secrets_manager_per_secret_month')):.2f} | $0.40 per secret per month, no free allowance |")
+    L.append(f"| Azure Database for PostgreSQL Burstable B1ms + {_az_gib} GiB (West Europe) | "
+             f"{_eur(_p('azure_pg_flex_b1ms_hour') * HOURS_PER_MONTH + _p('azure_pg_flex_storage_gb_month') * _az_gib):.2f} | one server, no standby; {_az_gib} GiB is an assumed disk size |")
+    L.append(f"| Azure Database for PostgreSQL General Purpose 2 vCore with high availability + {_az_gib} GiB (West Europe) | "
+             f"{_eur(2 * (_p('azure_pg_flex_gp_2vcore_ddsv5_hour') * HOURS_PER_MONTH + _p('azure_pg_flex_storage_gb_month') * _az_gib)):.2f} | "
+             "Microsoft: the standby server is billed at the same rate as the primary |")
+    L.append(f"| Azure Key Vault, light use | {_eur(_p('azure_key_vault_per_10k_operations')):.2f} | $0.03 per 10,000 operations, no monthly fee per secret |")
     L.append("\nOnly list the OPTIONAL rows in the baseline if the app really needs them.\n")
 
     # ---- Hetzner single-server alternative -----------------------------------------
@@ -339,6 +439,10 @@ def build_cost_estimate(scan_result):
                       2 * ap_total + lb_eur))
     scenarios.append(("Cloud Run always-on, 2 instances per service, 1 load balancer",
                       2 * _eur(totals["run"]) + lb_eur))
+    opts, opt_meta = plan_options(scan_result, workloads)
+    for o in opts:
+        if o["set"] == "all" and o["platform"] in ("aws_fargate", "azure_container_apps"):
+            scenarios.append((o["label"], o["total"]))
     if has_db_option:
         _sec = _eur(max(0, 10 - 6) * _p('secret_manager_per_version_month'))
         _ap = " (MySQL repo: PostgreSQL rate, approximate)" if uses_mysql else ""
@@ -374,6 +478,14 @@ def build_cost_estimate(scan_result):
                               2 * run_keep + lb_eur + _eur(sql_ha) + _sec2))
     if has_db_option:
         approx = " (MySQL repo: PostgreSQL rate, approximate)" if uses_mysql else ""
+        for o in opts:
+            if o["set"] == "all" and o["platform"] in ("aws_fargate", "azure_container_apps"):
+                ad = opt_meta["addons"][o["platform"]]
+                ha = o["replicas"] >= 2
+                scenarios.append((f"{o['label']} + " + (ad["db_ha_note"] if ha else ad["db_note"]) + approx,
+                                  o["total"] + (ad["db_ha"] if ha else ad["db"]) + ad["secrets"]))
+    if has_db_option:
+        approx = " (MySQL repo: PostgreSQL rate, approximate)" if uses_mysql else ""
         extra = _eur(sql) + _eur(max(0, 10 - 6) * _p('secret_manager_per_version_month'))
         scenarios.append((f"Cloud Run always-on + 1 load balancer + Cloud SQL db-g1-small (no HA) + Secret Manager{approx}",
                           _eur(totals["run"]) + lb_eur + extra))
@@ -407,10 +519,10 @@ def build_cost_estimate(scan_result):
     L.append("\n### Not priced (no verified price available -- say so, do not guess)")
     L.extend(f"- {item}" for item in NOT_PRICED)
     L.append("- Cloud SQL instance sizes other than db-g1-small and the 1 vCPU / 3.75 GiB dedicated instance (larger machines are priced by vCPU and GiB; your real size depends on your data and load)")
-    L.append("- Read replicas, cross-region replicas and Cloud SQL backups beyond the included amount")
+    L.append("- Read replicas, cross-region replicas, and database backups beyond the included amount (Cloud SQL, Amazon RDS and Azure PostgreSQL)")
+    L.append("- Amazon RDS and Azure PostgreSQL sizes other than the ones in the table above (your real size depends on your data and load)")
     L.append("- Cost of more than two replicas per service, and any other replica count (only 1 and 2 replicas are in the totals)")
 
-    opts, opt_meta = plan_options(scan_result, workloads)
     structured = {"plan_options": opts, "plan_meta": opt_meta, "workloads": len(workloads), "total_cpu": round(totals["cpu"], 2),
                   "total_memory_gib": round(totals["mem"], 2),
                   "autopilot_eur": round(_eur(totals["autopilot"]), 2),

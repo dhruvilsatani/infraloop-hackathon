@@ -7,6 +7,7 @@ import time
 import uuid
 from collections import defaultdict, deque
 from pathlib import Path
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
@@ -28,6 +29,9 @@ LIMITS = {                                                          # path prefi
     "/scan": (int(os.environ.get("INFRALOOP_SCANS_PER_HOUR", "6")), 3600),
     "/answer": (int(os.environ.get("INFRALOOP_REPORTS_PER_HOUR", "6")), 3600),
     "/upload/start": (int(os.environ.get("INFRALOOP_UPLOADS_PER_HOUR", "6")), 3600),
+    "/generate": (int(os.environ.get("INFRALOOP_GENERATE_PER_HOUR", "20")), 3600),
+    "/targets": (int(os.environ.get("INFRALOOP_TARGETS_PER_HOUR", "60")), 3600),
+    "/preview": (int(os.environ.get("INFRALOOP_PREVIEW_PER_HOUR", "120")), 3600),
 }
 DAILY_REPORTS = int(os.environ.get("INFRALOOP_DAILY_REPORTS", "60"))   # all visitors together
 _HITS = defaultdict(deque)
@@ -215,6 +219,78 @@ def submit_answers(req: AnswerRequest):
     session.setdefault("asked", []).extend({"question": q} for q in followups if isinstance(q, str))
     _save_session(req.session_id, session)
     return {"status": "need_more_info", "questions": followups}
+
+
+class GenerateRequest(BaseModel):
+    session_id: str = Field(max_length=64)
+    target: Optional[str] = Field(default=None, max_length=40)
+
+
+class TargetsRequest(BaseModel):
+    session_id: str = Field(max_length=64)
+
+
+def _targets_for(session):
+    """The 'where will it run?' options for a finished scan, built from the same plan the report used."""
+    import generators
+    from nodes import architecture_reasoner as ar
+    scan, answers = session["scan_result"], session.get("answers", {})
+    plan = None
+    try:
+        _, cost_data = ar._cost_for(scan, answers)
+        plan = ar._plan_for(scan, answers, cost_data) if cost_data else None
+    except Exception as exc:          # the choice list must never break the page
+        print(f"[targets] no plan: {exc}")
+    return generators.build_targets(scan, plan, session.get("gaps"))
+
+
+@app.post("/targets")
+def targets(req: TargetsRequest):
+    session = _load_session(req.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="This scan session was lost (the server restarted). Please scan the repo again.")
+    return {"targets": _targets_for(session)}
+
+
+def _bundle_for(req):
+    session = _load_session(req.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="This scan session was lost (the server restarted). Please scan the repo again.")
+    import generators
+    chosen = None
+    if req.target:
+        chosen = generators.find_target(_targets_for(session), req.target)
+        if not chosen:
+            raise HTTPException(status_code=422, detail="Unknown choice. Reload the page and pick one of the listed options.")
+    return generators.generate_files(session["scan_result"], session["gaps"], chosen)
+
+
+@app.post("/generate")
+def generate(req: GenerateRequest):
+    """Starter files (and, for a supported choice, infrastructure files) for an earlier scan. Built from the saved scan facts only:
+    the uploaded code is already deleted, no AI model is involved, and nothing is stored."""
+    import generators
+    bundle = _bundle_for(req)
+    return Response(content=generators.to_zip_bytes(bundle), media_type="application/zip",
+                    headers={"Content-Disposition": 'attachment; filename="infraloop-generated.zip"',
+                             "X-Files-Generated": str(len(bundle.files)), "X-Fixes-Advised": str(len(bundle.advice))})
+
+
+@app.post("/preview")
+def preview(req: GenerateRequest):
+    """The same files as /generate, as JSON, so the page can show what is in the zip before anyone downloads it."""
+    import generators
+    from generators.targets import is_cloud_file
+    bundle = _bundle_for(req)
+    docs = [{"path": "MANIFEST.md", "title": "What each file assumes and what to check", "content": generators.manifest(bundle)}]
+    if bundle.implementation:
+        docs.insert(0, {"path": "IMPLEMENTATION.md", "title": "What to do with these files, step by step", "content": bundle.implementation})
+    if bundle.brief:
+        docs.insert(0, {"path": "SETUP.md", "title": "Your chosen setup in plain words", "content": bundle.brief})
+    return {"docs": docs,
+            "files": [{"path": f.path, "title": f.title, "content": f.content, "group": "cloud" if is_cloud_file(f.path) else "basic"} for f in bundle.files],
+            "advice": [{"gap": a.gap, "title": a.title} for a in bundle.advice],
+            "skipped": [{"gap": k.gap, "reason": k.reason} for k in bundle.skipped]}
 
 
 app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")
